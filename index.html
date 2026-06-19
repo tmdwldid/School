@@ -133,8 +133,8 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
     <div><div class="login-logo-text">선생님 지수 투자</div><div class="login-logo-sub">우리 반 경제 시뮬레이션</div></div>
   </div>
   <div class="tab-row">
-    <button class="tab-btn active" id="tabStu" onclick="switchTab('student')">학생 로그인</button>
-    <button class="tab-btn" id="tabTch" onclick="switchTab('teacher')">선생님 로그인</button>
+    <button class="tab-btn active" id="tabStu">학생 로그인</button>
+    <button class="tab-btn" id="tabTch">선생님 로그인</button>
   </div>
   <div id="stuForm">
     <div class="grid2">
@@ -150,13 +150,13 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
       <div class="field"><label>이름</label><input type="text" id="sName" placeholder="이름 입력"></div>
     </div>
     <div class="err-msg" id="stuErr">학년 · 반 · 번호 · 이름을 모두 입력해주세요.</div>
-    <button class="login-btn" onclick="studentLogin()">입장하기</button>
+    <button class="login-btn" id="stuLoginBtn">입장하기</button>
   </div>
   <div id="tchForm" style="display:none">
     <div class="field"><label>아이디</label><input type="text" id="tId" placeholder="아이디"></div>
     <div class="field"><label>비밀번호</label><input type="password" id="tPw" placeholder="비밀번호"></div>
     <div class="err-msg" id="tchErr">아이디 또는 비밀번호가 틀렸어요.</div>
-    <button class="login-btn" onclick="teacherLogin()">로그인</button>
+    <button class="login-btn" id="tchLoginBtn">로그인</button>
   </div>
 </div></div>
 </div>
@@ -164,7 +164,7 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
 <div id="studentScreen" class="screen">
 <div class="top-bar">
   <div><div class="top-title" id="sTopName"></div><div class="top-sub" id="sTopSub"></div></div>
-  <button class="logout-btn" onclick="logout()">로그아웃</button>
+  <button class="logout-btn" id="stuLogoutBtn">로그아웃</button>
 </div>
 <div class="content">
   <div class="card" id="assetCard"><div class="loading-wrap"><div class="spinner"></div><br>불러오는 중...</div></div>
@@ -176,7 +176,7 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
     <div class="card-title">오늘 투자하기</div>
     <div id="investRows"></div>
   </div>
-  <button class="confirm-btn" onclick="confirmInvest()">투자 확정하기</button>
+  <button class="confirm-btn" id="confirmInvestBtn">투자 확정하기</button>
   <div class="card">
     <div class="card-title">투자 기록</div>
     <div id="investLog"><div class="empty-note">불러오는 중...</div></div>
@@ -187,7 +187,7 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
 <div id="teacherScreen" class="screen">
 <div class="top-bar">
   <div><div class="top-title">관리자 대시보드</div><div class="top-sub">전체 학생 투자 현황</div></div>
-  <button class="logout-btn" onclick="logout()">로그아웃</button>
+  <button class="logout-btn" id="tchLogoutBtn">로그아웃</button>
 </div>
 <div class="content">
   <div class="card">
@@ -197,7 +197,7 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
       <div class="ti-item"><label>🔥 활동 칼로리 (kcal)</label><input type="number" id="ti_cal" placeholder="예: 280"></div>
       <div class="ti-item"><label>📺 유튜브 시청 (분)</label><input type="number" id="ti_yt" placeholder="예: 18"></div>
     </div>
-    <button class="resolve-btn" id="resolveBtn" onclick="resolveAll()">결산하기 — 모든 학생 투자 반영</button>
+    <button class="resolve-btn" id="resolveBtn">결산하기 — 모든 학생 투자 반영</button>
     <div class="resolve-msg" id="resolveMsg"></div>
   </div>
   <div class="card">
@@ -213,10 +213,51 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
 
 <div class="toast" id="toast"></div>
 
+<script>
+// 모듈 스크립트 로딩/실행 실패를 잡기 위한 전역 에러 핸들러
+window.addEventListener('error', function(e){
+  showFatalError('스크립트 오류: ' + e.message + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : ''));
+});
+window.addEventListener('unhandledrejection', function(e){
+  showFatalError('처리되지 않은 오류: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+});
+function showFatalError(msg){
+  let banner = document.getElementById('fatalErrorBanner');
+  if(!banner){
+    banner = document.createElement('div');
+    banner.id = 'fatalErrorBanner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#C62828;color:#fff;padding:14px 20px;font-size:13px;font-weight:700;z-index:99999;box-shadow:0 2px 8px rgba(0,0,0,.3);font-family:sans-serif;line-height:1.5';
+    document.body.prepend(banner);
+  }
+  const line = document.createElement('div');
+  line.textContent = '⚠ ' + msg;
+  banner.appendChild(line);
+}
+
+// 모듈 스크립트가 늦게 로드되거나 실패할 경우를 대비한 즉시 fallback 바인딩
+window.MODULE_READY = false;
+document.addEventListener('DOMContentLoaded', function(){
+  const stuBtn = document.getElementById('stuLoginBtn');
+  if(stuBtn){
+    stuBtn.addEventListener('click', function(){
+      if(!window.MODULE_READY){
+        showFatalError('아직 페이지가 완전히 로드되지 않았어요. 5초만 기다린 후 다시 눌러보거나, 새로고침(F5) 해주세요.');
+      }
+    });
+  }
+  setTimeout(function(){
+    if(!window.MODULE_READY){
+      showFatalError('Firebase 연결 모듈이 로드되지 않았어요. 인터넷 연결을 확인하거나 새로고침 해주세요. (네트워크가 gstatic.com을 차단하고 있을 수 있어요)');
+    }
+  }, 6000);
+});
+</script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+try {
 
 const firebaseConfig = {
   apiKey: "AIzaSyC1aQhjO9eW-mopZEwFotg_4QPy6711mxs",
@@ -265,35 +306,41 @@ const todayRef = ()  => doc(db,'meta','today');
 async function getStu(sid){ const d=await getDoc(stuRef(sid)); return d.exists()?d.data():null; }
 async function getToday(){ const d=await getDoc(todayRef()); return d.exists()?d.data():{}; }
 
-window.switchTab = t => {
+function switchTab(t) {
   document.getElementById('tabStu').classList.toggle('active',t==='student');
   document.getElementById('tabTch').classList.toggle('active',t==='teacher');
   document.getElementById('stuForm').style.display=t==='student'?'':'none';
   document.getElementById('tchForm').style.display=t==='teacher'?'':'none';
-};
+}
 
-window.studentLogin = async () => {
+async function studentLogin() {
   const g=document.getElementById('sGrade').value;
   const c=document.getElementById('sClass').value;
   const n=document.getElementById('sNum').value.trim();
   const name=document.getElementById('sName').value.trim();
   const err=document.getElementById('stuErr');
-  if(!g||!c||!n||!name){err.style.display='block';return;}
+  if(!g||!c||!n||!name){err.style.display='block';err.textContent='학년 · 반 · 번호 · 이름을 모두 입력해주세요.';return;}
   err.style.display='none';
   const sid=makeSid(g,c,n,name);
-  let stu=await getStu(sid);
-  if(!stu){
-    stu={grade:g,cls:c,num:n,name,cash:INIT_CASH,invested:0,totalStart:INIT_CASH,pending:{}};
-    await setDoc(stuRef(sid),stu);
+  try{
+    let stu=await getStu(sid);
+    if(!stu){
+      stu={grade:g,cls:c,num:n,name,cash:INIT_CASH,invested:0,totalStart:INIT_CASH,pending:{}};
+      await setDoc(stuRef(sid),stu);
+    }
+    currentSid=sid;
+    document.getElementById('sTopName').textContent=name+' 투자자';
+    document.getElementById('sTopSub').textContent=g+'학년 '+c+'반 '+n+'번';
+    showScreen('studentScreen');
+    loadStudent();
+  }catch(e){
+    console.error('로그인 에러:',e);
+    err.style.display='block';
+    err.textContent='연결 오류: '+e.message+' (네트워크를 확인하거나 새로고침 해주세요)';
   }
-  currentSid=sid;
-  document.getElementById('sTopName').textContent=name+' 투자자';
-  document.getElementById('sTopSub').textContent=g+'학년 '+c+'반 '+n+'번';
-  showScreen('studentScreen');
-  loadStudent();
-};
+}
 
-window.teacherLogin = () => {
+function teacherLogin() {
   const id=document.getElementById('tId').value.trim();
   const pw=document.getElementById('tPw').value.trim();
   const err=document.getElementById('tchErr');
@@ -301,9 +348,9 @@ window.teacherLogin = () => {
   err.style.display='none';
   showScreen('teacherScreen');
   loadTeacher();
-};
+}
 
-window.logout = () => { currentSid=null; resetPlan(); showScreen('loginScreen'); };
+function logout() { currentSid=null; resetPlan(); showScreen('loginScreen'); }
 
 async function loadStudent(){
   const [stu,today]=await Promise.all([getStu(currentSid),getToday()]);
@@ -360,31 +407,40 @@ function renderInvestRows(stu){
   document.getElementById('investRows').innerHTML=IDX.map(idx=>{
     const p=plan[idx.key];
     const chips=[1,2,3,5,10].filter(x=>x<=maxStep).map(x=>
-      '<span class="amt-chip '+(p.amt===x*100?'sel':'')+'" onclick="setAmt(\''+idx.key+'\','+x*100+')">'+x*100+'</span>'
-    ).join('')+'<span class="amt-chip '+(p.amt===0?'sel':'')+'" onclick="setAmt(\''+idx.key+'\',0)">안 함</span>';
+      '<span class="amt-chip '+(p.amt===x*100?'sel':'')+'" data-act="amt" data-key="'+idx.key+'" data-amt="'+(x*100)+'">'+x*100+'</span>'
+    ).join('')+'<span class="amt-chip '+(p.amt===0?'sel':'')+'" data-act="amt" data-key="'+idx.key+'" data-amt="0">안 함</span>';
     const warn=p.pred==='down'&&p.amt>0?'<div class="warn-note">⚠ 하락 예측으로 투자하면 결과와 무관하게 손실이 발생해요.</div>':'';
     return '<div class="invest-row '+(p.pred&&p.amt>0?'has-invest':'')+'">'+
       '<div class="irow-top">'+
         '<div class="irow-name">'+idx.emoji+' '+idx.name+'</div>'+
         '<div class="pred-row">'+
-          '<button class="pred-btn '+(p.pred==='up'?'sel-up':'')+'" onclick="setPred(\''+idx.key+'\',\'up\')">▲ 상승 예측</button>'+
-          '<button class="pred-btn '+(p.pred==='down'?'sel-down':'')+'" onclick="setPred(\''+idx.key+'\',\'down\')">▼ 하락 예측</button>'+
+          '<button class="pred-btn '+(p.pred==='up'?'sel-up':'')+'" data-act="pred" data-key="'+idx.key+'" data-pred="up">▲ 상승 예측</button>'+
+          '<button class="pred-btn '+(p.pred==='down'?'sel-down':'')+'" data-act="pred" data-key="'+idx.key+'" data-pred="down">▼ 하락 예측</button>'+
         '</div></div>'+
       '<div class="amt-row"><span class="amt-label">투자금 (캔)</span><div class="amt-chips">'+chips+'</div></div>'+
       warn+'</div>';
   }).join('');
 }
 
-window.setPred = async (key,pred) => {
+async function handlePred(key,pred){
   plan[key].pred=plan[key].pred===pred?null:pred;
   const stu=await getStu(currentSid); renderInvestRows(stu);
-};
-window.setAmt = async (key,amt) => {
+}
+async function handleAmt(key,amt){
   plan[key].amt=amt;
   const stu=await getStu(currentSid); renderInvestRows(stu);
-};
+}
 
-window.confirmInvest = async () => {
+document.getElementById('investRows').addEventListener('click', (e)=>{
+  const t=e.target.closest('[data-act]');
+  if(!t) return;
+  const key=t.dataset.key;
+  if(t.dataset.act==='pred') handlePred(key, t.dataset.pred);
+  if(t.dataset.act==='amt') handleAmt(key, Number(t.dataset.amt));
+});
+
+
+async function confirmInvest() {
   const stu=await getStu(currentSid);
   let total=0;
   const pending={};
@@ -395,7 +451,7 @@ window.confirmInvest = async () => {
   resetPlan();
   toast('투자 완료! 선생님이 결산하면 결과를 확인할 수 있어요.');
   loadStudent();
-};
+}
 
 async function renderLog(){
   const d=await getDoc(logRef(currentSid));
@@ -451,7 +507,7 @@ async function loadAdminTable(){
       '</tbody></table></div>';
 }
 
-window.resolveAll = async () => {
+async function resolveAll() {
   const steps=Number(document.getElementById('ti_steps').value);
   const cal  =Number(document.getElementById('ti_cal').value);
   const yt   =Number(document.getElementById('ti_yt').value);
@@ -494,7 +550,33 @@ window.resolveAll = async () => {
   msg.textContent=results.length?'결산 완료 — '+results.join(' / '):'투자 중인 학생이 없어요.';
   renderIdxCards('tIdxCards',newToday);
   loadAdminTable();
-};
+}
+
+/* ── 정적 버튼 이벤트 등록 ── */
+document.getElementById('tabStu').addEventListener('click', ()=>switchTab('student'));
+document.getElementById('tabTch').addEventListener('click', ()=>switchTab('teacher'));
+document.getElementById('stuLoginBtn').addEventListener('click', studentLogin);
+document.getElementById('tchLoginBtn').addEventListener('click', teacherLogin);
+document.getElementById('stuLogoutBtn').addEventListener('click', logout);
+document.getElementById('tchLogoutBtn').addEventListener('click', logout);
+document.getElementById('confirmInvestBtn').addEventListener('click', confirmInvest);
+document.getElementById('resolveBtn').addEventListener('click', resolveAll);
+
+/* 엔터키로도 로그인 가능하게 */
+['sNum','sName'].forEach(id=>{
+  document.getElementById(id).addEventListener('keydown', e=>{ if(e.key==='Enter') studentLogin(); });
+});
+['tId','tPw'].forEach(id=>{
+  document.getElementById(id).addEventListener('keydown', e=>{ if(e.key==='Enter') teacherLogin(); });
+});
+
+window.MODULE_READY = true;
+console.log('Firebase 모듈 정상 로드 완료');
+
+} catch(moduleError) {
+  showFatalError('초기화 실패: ' + moduleError.message);
+  console.error('MODULE INIT ERROR:', moduleError);
+}
 </script>
 </body>
 </html>
