@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>선생님 지수 투자</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1A3A5C;--blue:#2E6DA4;--blue-light:#D6E8F7;
+  --orange:#F4A623;--orange-light:#FFF3B0;
+  --green:#2E7D32;--green-bg:#E8F5E9;
+  --red:#C62828;--red-bg:#FFEBEE;
+  --gray:#64748B;--gray-bg:#F5F7FA;--border:#E2E8F0;
+  --white:#fff;--text:#1E293B;--text-muted:#64748B;
+  --radius:10px;--radius-sm:6px;
+}
+html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gray-bg);color:var(--text);font-size:14px}
+.screen{display:none;min-height:100vh}.screen.active{display:block}
+.login-bg{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1A3A5C 0%,#2E6DA4 100%);padding:1rem}
+.login-card{background:#fff;border-radius:16px;padding:2rem;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:1.5rem}
+.login-logo-icon{width:42px;height:42px;background:var(--navy);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.login-logo-text{font-size:18px;font-weight:700;color:var(--navy)}
+.login-logo-sub{font-size:12px;color:var(--text-muted)}
+.tab-row{display:flex;background:var(--gray-bg);border-radius:var(--radius-sm);padding:3px;margin-bottom:1.25rem}
+.tab-btn{flex:1;padding:7px;border:none;background:transparent;border-radius:5px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-muted);font-family:'Noto Sans KR',sans-serif}
+.tab-btn.active{background:#fff;color:var(--navy);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12px;font-weight:500;color:var(--text-muted);margin-bottom:5px}
+.field input,.field select{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'Noto Sans KR',sans-serif;color:var(--text);background:#fff;outline:none;transition:border .2s}
+.field input:focus,.field select:focus{border-color:var(--blue)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.login-btn{width:100%;padding:11px;background:var(--navy);color:#fff;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:4px;transition:opacity .2s}
+.login-btn:hover{opacity:.85}
+.err-msg{font-size:12px;color:var(--red);margin-top:6px;display:none}
+.top-bar{background:var(--navy);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.top-title{font-size:15px;font-weight:700}
+.top-sub{font-size:11px;opacity:.7;margin-top:1px}
+.logout-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:5px 12px;border-radius:20px;cursor:pointer;font-size:12px;font-family:'Noto Sans KR',sans-serif}
+.logout-btn:hover{background:rgba(255,255,255,.25)}
+.content{padding:16px;max-width:720px;margin:0 auto}
+.card{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:1rem 1.25rem;margin-bottom:12px}
+.card-title{font-size:12px;font-weight:700;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px}
+.asset-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.asset-stat{text-align:center;background:var(--gray-bg);border-radius:var(--radius-sm);padding:10px 6px}
+.asset-label{font-size:11px;color:var(--text-muted);margin-bottom:3px}
+.asset-val{font-size:17px;font-weight:700;color:var(--text)}
+.asset-val.up{color:var(--green)}.asset-val.down{color:var(--red)}
+.pbar-wrap{margin-bottom:5px}
+.pbar-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:3px}
+.pbar{height:8px;background:var(--gray-bg);border-radius:4px;overflow:hidden}
+.pbar-fill{height:100%;border-radius:4px;transition:width .5s}
+.fill-cash{background:var(--blue)}.fill-inv{background:var(--orange)}
+.idx-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.idx-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px}
+.idx-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.idx-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.idx-name{font-size:12px;font-weight:700;color:var(--text)}
+.idx-hint{font-size:10px;color:var(--text-muted)}
+.idx-val{font-size:22px;font-weight:700;color:var(--text);margin-bottom:2px}
+.idx-prev{font-size:11px;color:var(--text-muted);margin-bottom:8px}
+.idx-badge{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-up{background:var(--green-bg);color:var(--green)}
+.badge-down{background:var(--red-bg);color:var(--red)}
+.badge-none{background:var(--gray-bg);color:var(--text-muted)}
+.invest-row{border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:8px;transition:border-color .2s}
+.invest-row.has-invest{border-color:var(--blue)}
+.irow-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px}
+.irow-name{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+.pred-row{display:flex;gap:6px}
+.pred-btn{padding:5px 12px;border:1.5px solid var(--border);border-radius:20px;cursor:pointer;font-size:12px;font-weight:500;background:#fff;color:var(--text-muted);font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+.pred-btn:hover{border-color:var(--blue);color:var(--blue)}
+.pred-btn.sel-up{background:var(--green-bg);color:var(--green);border-color:var(--green)}
+.pred-btn.sel-down{background:var(--red-bg);color:var(--red);border-color:var(--red)}
+.amt-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.amt-label{font-size:12px;color:var(--text-muted);white-space:nowrap}
+.amt-chips{display:flex;gap:5px;flex-wrap:wrap}
+.amt-chip{padding:4px 10px;border:1.5px solid var(--border);border-radius:20px;cursor:pointer;font-size:12px;background:#fff;color:var(--text-muted);font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+.amt-chip:hover{border-color:var(--orange);color:var(--orange)}
+.amt-chip.sel{background:var(--orange-light);color:var(--orange);border-color:var(--orange);font-weight:700}
+.warn-note{font-size:11px;color:var(--red);margin-top:6px;background:var(--red-bg);padding:5px 8px;border-radius:4px}
+.confirm-btn{width:100%;padding:13px;background:var(--navy);color:#fff;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-bottom:12px;transition:opacity .2s}
+.confirm-btn:hover{opacity:.85}
+.log-item{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px}
+.log-item:last-child{border:none}
+.log-left{color:var(--text-muted)}
+.log-right{font-weight:700}
+.log-plus{color:var(--green)}.log-minus{color:var(--red)}
+.empty-note{text-align:center;color:var(--text-muted);font-size:13px;padding:20px}
+.admin-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.admin-stat-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:12px;text-align:center}
+.admin-stat-val{font-size:22px;font-weight:700;color:var(--navy);margin-bottom:2px}
+.admin-stat-label{font-size:11px;color:var(--text-muted)}
+.teacher-input-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.ti-item label{font-size:11px;font-weight:500;color:var(--text-muted);display:block;margin-bottom:4px}
+.ti-item input{width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:15px;font-weight:700;text-align:center;font-family:'Noto Sans KR',sans-serif;color:var(--text);outline:none}
+.ti-item input:focus{border-color:var(--blue)}
+.resolve-btn{width:100%;padding:11px;background:var(--orange);color:var(--navy);border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:opacity .2s}
+.resolve-btn:hover{opacity:.85}
+.resolve-btn:disabled{opacity:.4;cursor:not-allowed}
+.resolve-msg{margin-top:8px;font-size:12px;color:var(--text-muted);background:var(--gray-bg);padding:8px 10px;border-radius:var(--radius-sm);display:none;line-height:1.6}
+.stu-table{width:100%;border-collapse:collapse}
+.stu-table th{text-align:left;font-size:11px;color:var(--text-muted);font-weight:500;padding:6px 8px;border-bottom:2px solid var(--border);white-space:nowrap}
+.stu-table td{padding:9px 8px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+.stu-table tr:last-child td{border:none}
+.stu-table tr:hover td{background:var(--gray-bg)}
+.rank-badge{display:inline-flex;width:22px;height:22px;align-items:center;justify-content:center;border-radius:50%;font-size:11px;font-weight:700;background:var(--gray-bg);color:var(--text-muted)}
+.rank-gold{background:#FFF8DC;color:#B8860B}
+.rank-silver{background:#F0F0F0;color:#808080}
+.rank-bronze{background:#FFF0E8;color:#CD7F32}
+.pending-dot{display:inline-block;width:7px;height:7px;background:var(--orange);border-radius:50%;margin-left:5px;vertical-align:middle}
+.loading-wrap{text-align:center;padding:40px;color:var(--text-muted)}
+.spinner{display:inline-block;width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+@media(max-width:500px){
+  .asset-grid{grid-template-columns:repeat(2,1fr)}
+  .idx-grid{grid-template-columns:1fr}
+  .teacher-input-grid{grid-template-columns:1fr}
+  .content{padding:10px}
+}
+</style>
+</head>
+<body>
+
+<div id="loginScreen" class="screen active">
+<div class="login-bg"><div class="login-card">
+  <div class="login-logo">
+    <div class="login-logo-icon">📈</div>
+    <div><div class="login-logo-text">선생님 지수 투자</div><div class="login-logo-sub">우리 반 경제 시뮬레이션</div></div>
+  </div>
+  <div class="tab-row">
+    <button class="tab-btn active" id="tabStu" onclick="switchTab('student')">학생 로그인</button>
+    <button class="tab-btn" id="tabTch" onclick="switchTab('teacher')">선생님 로그인</button>
+  </div>
+  <div id="stuForm">
+    <div class="grid2">
+      <div class="field"><label>학년</label>
+        <select id="sGrade"><option value="">선택</option><option>1</option><option>2</option><option>3</option><option>4</option><option value="5" selected>5</option><option>6</option></select>
+      </div>
+      <div class="field"><label>반</label>
+        <select id="sClass"><option value="">선택</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>번호</label><input type="number" id="sNum" placeholder="출석번호" min="1" max="40"></div>
+      <div class="field"><label>이름</label><input type="text" id="sName" placeholder="이름 입력"></div>
+    </div>
+    <div class="err-msg" id="stuErr">학년 · 반 · 번호 · 이름을 모두 입력해주세요.</div>
+    <button class="login-btn" onclick="studentLogin()">입장하기</button>
+  </div>
+  <div id="tchForm" style="display:none">
+    <div class="field"><label>아이디</label><input type="text" id="tId" placeholder="아이디"></div>
+    <div class="field"><label>비밀번호</label><input type="password" id="tPw" placeholder="비밀번호"></div>
+    <div class="err-msg" id="tchErr">아이디 또는 비밀번호가 틀렸어요.</div>
+    <button class="login-btn" onclick="teacherLogin()">로그인</button>
+  </div>
+</div></div>
+</div>
+
+<div id="studentScreen" class="screen">
+<div class="top-bar">
+  <div><div class="top-title" id="sTopName"></div><div class="top-sub" id="sTopSub"></div></div>
+  <button class="logout-btn" onclick="logout()">로그아웃</button>
+</div>
+<div class="content">
+  <div class="card" id="assetCard"><div class="loading-wrap"><div class="spinner"></div><br>불러오는 중...</div></div>
+  <div class="card">
+    <div class="card-title">오늘의 선생님 지수</div>
+    <div class="idx-grid" id="idxCards"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">오늘 투자하기</div>
+    <div id="investRows"></div>
+  </div>
+  <button class="confirm-btn" onclick="confirmInvest()">투자 확정하기</button>
+  <div class="card">
+    <div class="card-title">투자 기록</div>
+    <div id="investLog"><div class="empty-note">불러오는 중...</div></div>
+  </div>
+</div>
+</div>
+
+<div id="teacherScreen" class="screen">
+<div class="top-bar">
+  <div><div class="top-title">관리자 대시보드</div><div class="top-sub">전체 학생 투자 현황</div></div>
+  <button class="logout-btn" onclick="logout()">로그아웃</button>
+</div>
+<div class="content">
+  <div class="card">
+    <div class="card-title">오늘의 선생님 지수 입력 &amp; 결산</div>
+    <div class="teacher-input-grid">
+      <div class="ti-item"><label>🦶 걸음수 (보)</label><input type="number" id="ti_steps" placeholder="예: 9400"></div>
+      <div class="ti-item"><label>🔥 활동 칼로리 (kcal)</label><input type="number" id="ti_cal" placeholder="예: 280"></div>
+      <div class="ti-item"><label>📺 유튜브 시청 (분)</label><input type="number" id="ti_yt" placeholder="예: 18"></div>
+    </div>
+    <button class="resolve-btn" id="resolveBtn" onclick="resolveAll()">결산하기 — 모든 학생 투자 반영</button>
+    <div class="resolve-msg" id="resolveMsg"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">오늘의 지수 현황</div>
+    <div class="idx-grid" id="tIdxCards"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">학생 투자 현황</div>
+    <div id="adminContent"><div class="loading-wrap"><div class="spinner"></div><br>불러오는 중...</div></div>
+  </div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC1aQhjO9eW-mopZEwFotg_4QPy6711mxs",
+  authDomain: "tmdwldid1012.firebaseapp.com",
+  projectId: "tmdwldid1012",
+  storageBucket: "tmdwldid1012.firebasestorage.app",
+  messagingSenderId: "87934170616",
+  appId: "1:87934170616:web:4446271f1f45dfc4ea120d"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+const TEACHER_ID = 'tmdwldid';
+const TEACHER_PW = '5151';
+const INIT_CASH  = 1000;
+const IDX = [
+  {key:'steps', name:'걸음수',      unit:'보',   emoji:'🦶', bg:'#D6E8F7', invert:false},
+  {key:'cal',   name:'활동 칼로리', unit:'kcal', emoji:'🔥', bg:'#FFF3E0', invert:false},
+  {key:'yt',    name:'유튜브 시청', unit:'분',   emoji:'📺', bg:'#E8F5E9', invert:true, hint:'적을수록 지수 상승'},
+];
+
+let currentSid = null;
+let plan = {};
+function resetPlan(){ IDX.forEach(i => plan[i.key] = {pred:null, amt:0}); }
+resetPlan();
+
+const fmtC = n => Number(n).toLocaleString() + '캔';
+const fmtN = (n,u) => Number(n).toLocaleString() + ' ' + u;
+const todayStr = () => new Date().toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'});
+const makeSid  = (g,c,n,name) => `${g}-${c}-${n}-${name}`;
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+const stuRef   = sid => doc(db,'students',sid);
+const logRef   = sid => doc(db,'logs',sid);
+const todayRef = ()  => doc(db,'meta','today');
+async function getStu(sid){ const d=await getDoc(stuRef(sid)); return d.exists()?d.data():null; }
+async function getToday(){ const d=await getDoc(todayRef()); return d.exists()?d.data():{}; }
+
+window.switchTab = t => {
+  document.getElementById('tabStu').classList.toggle('active',t==='student');
+  document.getElementById('tabTch').classList.toggle('active',t==='teacher');
+  document.getElementById('stuForm').style.display=t==='student'?'':'none';
+  document.getElementById('tchForm').style.display=t==='teacher'?'':'none';
+};
+
+window.studentLogin = async () => {
+  const g=document.getElementById('sGrade').value;
+  const c=document.getElementById('sClass').value;
+  const n=document.getElementById('sNum').value.trim();
+  const name=document.getElementById('sName').value.trim();
+  const err=document.getElementById('stuErr');
+  if(!g||!c||!n||!name){err.style.display='block';return;}
+  err.style.display='none';
+  const sid=makeSid(g,c,n,name);
+  let stu=await getStu(sid);
+  if(!stu){
+    stu={grade:g,cls:c,num:n,name,cash:INIT_CASH,invested:0,totalStart:INIT_CASH,pending:{}};
+    await setDoc(stuRef(sid),stu);
+  }
+  currentSid=sid;
+  document.getElementById('sTopName').textContent=name+' 투자자';
+  document.getElementById('sTopSub').textContent=g+'학년 '+c+'반 '+n+'번';
+  showScreen('studentScreen');
+  loadStudent();
+};
+
+window.teacherLogin = () => {
+  const id=document.getElementById('tId').value.trim();
+  const pw=document.getElementById('tPw').value.trim();
+  const err=document.getElementById('tchErr');
+  if(id!==TEACHER_ID||pw!==TEACHER_PW){err.style.display='block';return;}
+  err.style.display='none';
+  showScreen('teacherScreen');
+  loadTeacher();
+};
+
+window.logout = () => { currentSid=null; resetPlan(); showScreen('loginScreen'); };
+
+async function loadStudent(){
+  const [stu,today]=await Promise.all([getStu(currentSid),getToday()]);
+  renderAsset(stu);
+  renderIdxCards('idxCards',today);
+  renderInvestRows(stu);
+  renderLog();
+}
+
+function renderAsset(stu){
+  const total=stu.cash+stu.invested;
+  const roi=((total-stu.totalStart)/stu.totalStart*100).toFixed(1);
+  const cashPct=total>0?Math.round(stu.cash/total*100):100;
+  const invPct=total>0?Math.round(stu.invested/total*100):0;
+  document.getElementById('assetCard').innerHTML=`
+    <div class="card-title">내 자산 현황</div>
+    <div class="asset-grid">
+      <div class="asset-stat"><div class="asset-label">총 자산</div><div class="asset-val">${fmtC(total)}</div></div>
+      <div class="asset-stat"><div class="asset-label">현금</div><div class="asset-val">${fmtC(stu.cash)}</div></div>
+      <div class="asset-stat"><div class="asset-label">투자 중</div><div class="asset-val">${fmtC(stu.invested)}</div></div>
+      <div class="asset-stat"><div class="asset-label">수익률</div><div class="asset-val ${roi>=0?'up':'down'}">${roi>=0?'+':''}${roi}%</div></div>
+    </div>
+    <div class="pbar-wrap">
+      <div class="pbar-label"><span>현금 비중</span><span>${cashPct}%</span></div>
+      <div class="pbar"><div class="pbar-fill fill-cash" style="width:${cashPct}%"></div></div>
+    </div>
+    <div class="pbar-wrap">
+      <div class="pbar-label"><span>투자 비중</span><span>${invPct}%</span></div>
+      <div class="pbar"><div class="pbar-fill fill-inv" style="width:${invPct}%"></div></div>
+    </div>`;
+}
+
+function renderIdxCards(cid,today){
+  document.getElementById(cid).innerHTML=IDX.map(idx=>{
+    const curr=today[idx.key]??null, prev=today['prev_'+idx.key]??null;
+    let badge='';
+    if(curr!==null&&prev!==null){
+      const rose=idx.invert?(curr<prev):(curr>prev);
+      badge=rose?'<span class="idx-badge badge-up">▲ 상승</span>':'<span class="idx-badge badge-down">▼ 하락</span>';
+    } else badge='<span class="idx-badge badge-none">미입력</span>';
+    return `<div class="idx-card">
+      <div class="idx-head">
+        <div class="idx-icon" style="background:${idx.bg}">${idx.emoji}</div>
+        <div><div class="idx-name">${idx.name}</div>${idx.hint?'<div class="idx-hint">'+idx.hint+'</div>':''}</div>
+      </div>
+      <div class="idx-val">${curr!==null?fmtN(curr,idx.unit):'—'}</div>
+      <div class="idx-prev">전일: ${prev!==null?fmtN(prev,idx.unit):'미입력'}</div>
+      ${badge}</div>`;
+  }).join('');
+}
+
+function renderInvestRows(stu){
+  const maxStep=Math.floor(stu.cash/100);
+  document.getElementById('investRows').innerHTML=IDX.map(idx=>{
+    const p=plan[idx.key];
+    const chips=[1,2,3,5,10].filter(x=>x<=maxStep).map(x=>
+      '<span class="amt-chip '+(p.amt===x*100?'sel':'')+'" onclick="setAmt(\''+idx.key+'\','+x*100+')">'+x*100+'</span>'
+    ).join('')+'<span class="amt-chip '+(p.amt===0?'sel':'')+'" onclick="setAmt(\''+idx.key+'\',0)">안 함</span>';
+    const warn=p.pred==='down'&&p.amt>0?'<div class="warn-note">⚠ 하락 예측으로 투자하면 결과와 무관하게 손실이 발생해요.</div>':'';
+    return '<div class="invest-row '+(p.pred&&p.amt>0?'has-invest':'')+'">'+
+      '<div class="irow-top">'+
+        '<div class="irow-name">'+idx.emoji+' '+idx.name+'</div>'+
+        '<div class="pred-row">'+
+          '<button class="pred-btn '+(p.pred==='up'?'sel-up':'')+'" onclick="setPred(\''+idx.key+'\',\'up\')">▲ 상승 예측</button>'+
+          '<button class="pred-btn '+(p.pred==='down'?'sel-down':'')+'" onclick="setPred(\''+idx.key+'\',\'down\')">▼ 하락 예측</button>'+
+        '</div></div>'+
+      '<div class="amt-row"><span class="amt-label">투자금 (캔)</span><div class="amt-chips">'+chips+'</div></div>'+
+      warn+'</div>';
+  }).join('');
+}
+
+window.setPred = async (key,pred) => {
+  plan[key].pred=plan[key].pred===pred?null:pred;
+  const stu=await getStu(currentSid); renderInvestRows(stu);
+};
+window.setAmt = async (key,amt) => {
+  plan[key].amt=amt;
+  const stu=await getStu(currentSid); renderInvestRows(stu);
+};
+
+window.confirmInvest = async () => {
+  const stu=await getStu(currentSid);
+  let total=0;
+  const pending={};
+  IDX.forEach(i=>{ if(plan[i.key].pred&&plan[i.key].amt>0){ total+=plan[i.key].amt; pending[i.key]={pred:plan[i.key].pred,amt:plan[i.key].amt}; } });
+  if(total===0){toast('투자할 지수와 금액을 선택해주세요.');return;}
+  if(total>stu.cash){toast('현금이 부족해요!');return;}
+  await updateDoc(stuRef(currentSid),{cash:stu.cash-total,invested:stu.invested+total,pending});
+  resetPlan();
+  toast('투자 완료! 선생님이 결산하면 결과를 확인할 수 있어요.');
+  loadStudent();
+};
+
+async function renderLog(){
+  const d=await getDoc(logRef(currentSid));
+  const logs=d.exists()?(d.data().entries||[]):[];
+  const el=document.getElementById('investLog');
+  if(!logs.length){el.innerHTML='<div class="empty-note">아직 투자 기록이 없어요.</div>';return;}
+  el.innerHTML=[...logs].reverse().map(l=>
+    '<div class="log-item">'+
+      '<div class="log-left">'+l.date+' · '+l.idx+' · '+(l.pred==='up'?'▲ 상승':'▼ 하락')+' 예측 · '+fmtC(l.amt)+'</div>'+
+      '<div class="log-right '+(l.pnl>=0?'log-plus':'log-minus')+'">'+(l.pnl>=0?'+':'')+fmtC(Math.abs(l.pnl))+' ('+(l.pnl>=0?'+':'')+l.rate+'%)</div>'+
+    '</div>'
+  ).join('');
+}
+
+async function loadTeacher(){
+  const today=await getToday();
+  if(today.steps) document.getElementById('ti_steps').value=today.steps;
+  if(today.cal)   document.getElementById('ti_cal').value=today.cal;
+  if(today.yt)    document.getElementById('ti_yt').value=today.yt;
+  renderIdxCards('tIdxCards',today);
+  loadAdminTable();
+}
+
+async function loadAdminTable(){
+  const snap=await getDocs(collection(db,'students'));
+  const students=snap.docs.map(d=>({...d.data(),sid:d.id}));
+  students.sort((a,b)=>(b.cash+b.invested)-(a.cash+a.invested));
+  const investing=students.filter(s=>s.pending&&Object.keys(s.pending).length>0).length;
+  const avg=students.length?Math.round(students.reduce((s,a)=>s+a.cash+a.invested,0)/students.length):0;
+  const rc=i=>i===0?'rank-gold':i===1?'rank-silver':i===2?'rank-bronze':'';
+  document.getElementById('adminContent').innerHTML=
+    '<div class="admin-stats">'+
+      '<div class="admin-stat-card"><div class="admin-stat-val">'+students.length+'명</div><div class="admin-stat-label">총 학생 수</div></div>'+
+      '<div class="admin-stat-card"><div class="admin-stat-val">'+investing+'명</div><div class="admin-stat-label">현재 투자 중</div></div>'+
+      '<div class="admin-stat-card"><div class="admin-stat-val">'+fmtC(avg)+'</div><div class="admin-stat-label">평균 자산</div></div>'+
+    '</div>'+
+    '<div style="overflow-x:auto"><table class="stu-table">'+
+      '<thead><tr><th>순위</th><th>이름</th><th>학년/반/번</th><th>총 자산</th><th>현금</th><th>투자 중</th><th>수익률</th></tr></thead>'+
+      '<tbody>'+students.map((s,i)=>{
+        const total=s.cash+s.invested;
+        const roi=((total-s.totalStart)/s.totalStart*100).toFixed(1);
+        const dot=s.pending&&Object.keys(s.pending).length>0?'<span class="pending-dot" title="투자 중"></span>':'';
+        return '<tr>'+
+          '<td><span class="rank-badge '+rc(i)+'">'+(i+1)+'</span></td>'+
+          '<td><strong>'+s.name+'</strong>'+dot+'</td>'+
+          '<td style="color:var(--text-muted)">'+s.grade+'학년 '+s.cls+'반 '+s.num+'번</td>'+
+          '<td><strong>'+fmtC(total)+'</strong></td>'+
+          '<td>'+fmtC(s.cash)+'</td>'+
+          '<td>'+fmtC(s.invested)+'</td>'+
+          '<td style="color:'+(roi>=0?'var(--green)':'var(--red)')+';font-weight:700">'+(roi>=0?'+':'')+roi+'%</td>'+
+        '</tr>';
+      }).join('')+
+      '</tbody></table></div>';
+}
+
+window.resolveAll = async () => {
+  const steps=Number(document.getElementById('ti_steps').value);
+  const cal  =Number(document.getElementById('ti_cal').value);
+  const yt   =Number(document.getElementById('ti_yt').value);
+  if(!steps||!cal||!yt){toast('세 가지 지수를 모두 입력해주세요.');return;}
+  const btn=document.getElementById('resolveBtn');
+  btn.disabled=true; btn.textContent='결산 중...';
+  const today=await getToday();
+  const newToday={steps,cal,yt,prev_steps:today.steps??null,prev_cal:today.cal??null,prev_yt:today.yt??null};
+  await setDoc(todayRef(),newToday);
+  const risen={};
+  IDX.forEach(idx=>{
+    const c=newToday[idx.key],p=newToday['prev_'+idx.key];
+    if(p===null){risen[idx.key]=null;return;}
+    risen[idx.key]=idx.invert?(c<p):(c>p);
+  });
+  const snap=await getDocs(collection(db,'students'));
+  const results=[];
+  for(const d of snap.docs){
+    const stu=d.data();
+    if(!stu.pending||!Object.keys(stu.pending).length) continue;
+    const logD=await getDoc(logRef(d.id));
+    const entries=logD.exists()?(logD.data().entries||[]):[];
+    let totalPnl=0;
+    for(const key of Object.keys(stu.pending)){
+      const p=stu.pending[key],actualUp=risen[key];
+      if(actualUp===null) continue;
+      const rate=p.pred==='up'?(actualUp?5:-10):-10;
+      const pnl=Math.round(p.amt*rate/100);
+      totalPnl+=pnl;
+      entries.push({date:todayStr(),idx:IDX.find(i=>i.key===key).name,pred:p.pred,amt:p.amt,rate,pnl});
+    }
+    const newCash=Math.max(0,stu.cash+stu.invested+totalPnl);
+    await updateDoc(doc(db,'students',d.id),{cash:newCash,invested:0,pending:{}});
+    await setDoc(logRef(d.id),{entries});
+    results.push(stu.name+' '+(totalPnl>=0?'+':'')+fmtC(totalPnl));
+  }
+  btn.disabled=false; btn.textContent='결산하기 — 모든 학생 투자 반영';
+  const msg=document.getElementById('resolveMsg');
+  msg.style.display='block';
+  msg.textContent=results.length?'결산 완료 — '+results.join(' / '):'투자 중인 학생이 없어요.';
+  renderIdxCards('tIdxCards',newToday);
+  loadAdminTable();
+};
+</script>
+</body>
+</html>
