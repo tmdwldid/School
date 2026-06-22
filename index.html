@@ -116,11 +116,67 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
 @keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
+
+/* 수익률 안내 카드 */
+.rate-info-card{background:#FAFCFE;border:1px solid var(--blue-light)}
+
+/* 학생 활성 날짜 카드 */
+.active-date-card{background:linear-gradient(135deg,#FFF8E1 0%,#FFF3B0 100%);border:1px solid var(--orange)}
+.active-date-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.active-date-current{display:flex;align-items:center;gap:8px}
+.ad-label{font-size:12px;font-weight:500;color:var(--text-muted)}
+.ad-value{font-size:18px;font-weight:700;color:var(--navy);background:#fff;padding:5px 12px;border-radius:var(--radius-sm);border:1.5px solid var(--orange)}
+.active-date-controls{display:flex;gap:6px;align-items:center}
+.apply-date-btn{padding:7px 14px;background:var(--orange);color:var(--navy);border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap}
+.apply-date-btn:hover{opacity:.85}
+.ad-hint{font-size:11px;color:#8B5A00;background:rgba(255,255,255,.5);padding:6px 10px;border-radius:4px}
+@media(max-width:500px){
+  .active-date-row{flex-direction:column;align-items:stretch}
+  .active-date-controls{flex-direction:column;align-items:stretch}
+}
+
+/* 날짜 선택 영역 */
+.date-picker-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--gray-bg);padding:10px 12px;border-radius:var(--radius-sm);margin-bottom:12px}
+.date-label{font-size:12px;font-weight:700;color:var(--navy);white-space:nowrap}
+.date-input{padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:'Noto Sans KR',sans-serif;color:var(--text);background:#fff;outline:none}
+.date-input:focus{border-color:var(--blue)}
+.today-btn{padding:6px 12px;border:1.5px solid var(--blue);background:#fff;color:var(--blue);border-radius:var(--radius-sm);font-size:12px;font-weight:500;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap}
+.today-btn:hover{background:var(--blue);color:#fff}
+.date-disp{font-size:13px;color:var(--text-muted);margin-left:auto}
+.date-disp.past{color:var(--orange);font-weight:700}
+.past-disp{color:var(--orange);font-weight:700}
+@media(max-width:500px){
+  .date-disp{margin-left:0;width:100%;font-size:12px}
+}
+.rate-row{display:flex;gap:10px;flex-wrap:wrap}
+.rate-item{flex:1;min-width:140px;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500}
+.rate-item strong{font-size:15px;font-weight:700}
+.rate-up{background:var(--green-bg);color:var(--green)}
+.rate-down{background:var(--red-bg);color:var(--red)}
+.rate-icon{font-size:14px;font-weight:700}
+.rate-note{font-size:11px;color:var(--text-muted);margin-top:8px;text-align:center}
+
+/* 지수 기록 테이블 */
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-sm)}
+.hist-table{width:100%;border-collapse:collapse;font-size:13px}
+.hist-table thead{background:var(--gray-bg)}
+.hist-table th{text-align:left;padding:8px 10px;font-size:11px;color:var(--text-muted);font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap}
+.hist-table td{padding:9px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+.hist-table tr:last-child td{border-bottom:none}
+.hist-table tr:hover td{background:#FAFCFE}
+.hist-table .empty-cell{text-align:center;color:var(--text-muted);padding:20px;font-size:13px}
+.hist-table tr.avg-row td{background:var(--orange-light)!important;color:#8B5A00;font-weight:700;border-top:1px solid var(--orange);border-bottom:2px solid var(--orange)}
+.hist-table tr.avg-row-pending td{background:#FFFBF0!important;font-size:11px}
+.del-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:11px;line-height:1;display:inline-flex;align-items:center;justify-content:center;font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+.del-btn:hover{background:var(--red-bg);color:var(--red);border-color:var(--red)}
+
 @media(max-width:500px){
   .asset-grid{grid-template-columns:repeat(2,1fr)}
   .idx-grid{grid-template-columns:1fr}
   .teacher-input-grid{grid-template-columns:1fr}
   .content{padding:10px}
+  .rate-row{flex-direction:column}
+  .hist-table th,.hist-table td{padding:6px 8px;font-size:12px}
 }
 </style>
 </head>
@@ -169,7 +225,7 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
 <div class="content">
   <div class="card" id="assetCard"><div class="loading-wrap"><div class="spinner"></div><br>불러오는 중...</div></div>
   <div class="card">
-    <div class="card-title">오늘의 선생님 지수</div>
+    <div class="card-title"><span id="sIdxTitleDate">오늘</span> 선생님 지수</div>
     <div class="idx-grid" id="idxCards"></div>
   </div>
   <div class="card">
@@ -177,6 +233,22 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
     <div id="investRows"></div>
   </div>
   <button class="confirm-btn" id="confirmInvestBtn">투자 확정하기</button>
+  <div class="card rate-info-card">
+    <div class="rate-row">
+      <div class="rate-item rate-up"><span class="rate-icon">▲</span> 예측 적중 시 <strong>+5%</strong></div>
+      <div class="rate-item rate-down"><span class="rate-icon">▼</span> 예측 빗나가면 <strong>-10%</strong></div>
+    </div>
+    <div class="rate-note">※ 수익률은 추후 변동될 수 있어요.</div>
+  </div>
+  <div class="card">
+    <div class="card-title">지수 기록 (날짜별)</div>
+    <div class="table-wrap">
+      <table class="hist-table">
+        <thead><tr><th>주차</th><th>날짜</th><th>🦶 걸음수</th><th>🔥 칼로리</th><th>📺 유튜브</th></tr></thead>
+        <tbody id="sHistoryBody"><tr><td colspan="5" class="empty-cell">불러오는 중...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
   <div class="card">
     <div class="card-title">투자 기록</div>
     <div id="investLog"><div class="empty-note">불러오는 중...</div></div>
@@ -190,8 +262,29 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
   <button class="logout-btn" id="tchLogoutBtn">로그아웃</button>
 </div>
 <div class="content">
+  <div class="card active-date-card">
+    <div class="card-title">🎯 학생 활성 날짜 (학생들이 지금 투자할 날짜)</div>
+    <div class="active-date-row">
+      <div class="active-date-current">
+        <span class="ad-label">현재:</span>
+        <span class="ad-value" id="activeDateDisp">—</span>
+      </div>
+      <div class="active-date-controls">
+        <input type="date" id="activeDateInput" class="date-input">
+        <button class="apply-date-btn" id="applyActiveDateBtn" type="button">학생 날짜 적용</button>
+      </div>
+    </div>
+    <div class="ad-hint">⚙️ 결산할 때마다 자동으로 결산 날짜로 이동돼요. 수동으로 점프하고 싶을 땐 위에서 날짜를 골라 적용하세요.</div>
+  </div>
+
   <div class="card">
-    <div class="card-title">오늘의 선생님 지수 입력 &amp; 결산</div>
+    <div class="card-title">선생님 지수 입력 &amp; 결산</div>
+    <div class="date-picker-row">
+      <label for="ti_date" class="date-label">📅 결산할 날짜</label>
+      <input type="date" id="ti_date" class="date-input">
+      <button class="today-btn" id="todayBtn" type="button">오늘로</button>
+      <span class="date-disp" id="ti_date_disp"></span>
+    </div>
     <div class="teacher-input-grid">
       <div class="ti-item"><label>🦶 걸음수 (보)</label><input type="number" id="ti_steps" placeholder="예: 9400"></div>
       <div class="ti-item"><label>🔥 활동 칼로리 (kcal)</label><input type="number" id="ti_cal" placeholder="예: 280"></div>
@@ -201,8 +294,24 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
     <div class="resolve-msg" id="resolveMsg"></div>
   </div>
   <div class="card">
-    <div class="card-title">오늘의 지수 현황</div>
+    <div class="card-title"><span id="tIdxTitleDate">오늘</span> 지수 현황</div>
     <div class="idx-grid" id="tIdxCards"></div>
+  </div>
+  <div class="card rate-info-card">
+    <div class="rate-row">
+      <div class="rate-item rate-up"><span class="rate-icon">▲</span> 예측 적중 시 <strong>+5%</strong></div>
+      <div class="rate-item rate-down"><span class="rate-icon">▼</span> 예측 빗나가면 <strong>-10%</strong></div>
+    </div>
+    <div class="rate-note">※ 수익률은 추후 변동될 수 있어요.</div>
+  </div>
+  <div class="card">
+    <div class="card-title">지수 기록 (날짜별 · 잘못 입력한 날은 ✕로 삭제 가능)</div>
+    <div class="table-wrap">
+      <table class="hist-table">
+        <thead><tr><th>주차</th><th>날짜</th><th>🦶 걸음수</th><th>🔥 칼로리</th><th>📺 유튜브</th><th></th></tr></thead>
+        <tbody id="tHistoryBody"><tr><td colspan="6" class="empty-cell">불러오는 중...</td></tr></tbody>
+      </table>
+    </div>
   </div>
   <div class="card">
     <div class="card-title">학생 투자 현황</div>
@@ -254,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function(){
 </script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs }
+import { initializeFirestore, getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 try {
@@ -269,7 +378,17 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db  = getFirestore(app);
+const DB_ID = "default";  // 이 프로젝트의 Firestore 데이터베이스 이름이 (default)가 아니라 default 임
+let db;
+try {
+  db = initializeFirestore(app, {
+    experimentalAutoDetectLongPolling: true,
+    useFetchStreams: false
+  }, DB_ID);
+} catch(initErr) {
+  console.warn('initializeFirestore 실패, getFirestore로 폴백:', initErr.message);
+  db = getFirestore(app, DB_ID);
+}
 
 const TEACHER_ID = 'tmdwldid';
 const TEACHER_PW = '5151';
@@ -289,6 +408,28 @@ const fmtC = n => Number(n).toLocaleString() + '캔';
 const fmtN = (n,u) => Number(n).toLocaleString() + ' ' + u;
 const todayStr = () => new Date().toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'});
 const makeSid  = (g,c,n,name) => `${g}-${c}-${n}-${name}`;
+const DAY_NAMES = ['일','월','화','수','목','금','토'];
+const todayKey = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+const dateKeyToDisp = k => {
+  const [y,m,d] = k.split('-').map(Number);
+  const dt = new Date(y,m-1,d);
+  return `${m}/${d}(${DAY_NAMES[dt.getDay()]})`;
+};
+// ISO 주 키 (YYYY-Www)
+const weekKey = (dateKey) => {
+  const [y,m,d] = dateKey.split('-').map(Number);
+  const dt = new Date(y,m-1,d);
+  // 월요일 시작 주 기준
+  const day = dt.getDay() || 7;
+  const monday = new Date(dt); monday.setDate(dt.getDate() - day + 1);
+  const yy = monday.getFullYear();
+  const mm = String(monday.getMonth()+1).padStart(2,'0');
+  const dd = String(monday.getDate()).padStart(2,'0');
+  return `${yy}-${mm}-${dd}`; // 그 주 월요일 날짜를 키로
+};
 
 function toast(msg){
   const t=document.getElementById('toast');
@@ -303,7 +444,22 @@ function showScreen(id){
 const stuRef   = sid => doc(db,'students',sid);
 const logRef   = sid => doc(db,'logs',sid);
 const todayRef = ()  => doc(db,'meta','today');
-async function getStu(sid){ const d=await getDoc(stuRef(sid)); return d.exists()?d.data():null; }
+const histRef  = dateKey => doc(db,'history',dateKey);
+async function getHistory(){
+  const snap = await getDocs(collection(db,'history'));
+  return snap.docs.map(d=>({date:d.id, ...d.data()})).sort((a,b)=>a.date.localeCompare(b.date));
+}
+async function getStu(sid){
+  try {
+    const d=await getDoc(stuRef(sid));
+    return d.exists()?d.data():null;
+  } catch(e) {
+    console.warn('getStu 1차 실패, 재시도:', e.message);
+    await new Promise(r=>setTimeout(r,1500));
+    const d=await getDoc(stuRef(sid));
+    return d.exists()?d.data():null;
+  }
+}
 async function getToday(){ const d=await getDoc(todayRef()); return d.exists()?d.data():{}; }
 
 function switchTab(t) {
@@ -354,10 +510,52 @@ function logout() { currentSid=null; resetPlan(); showScreen('loginScreen'); }
 
 async function loadStudent(){
   const [stu,today]=await Promise.all([getStu(currentSid),getToday()]);
+  // 학생이 볼 활성 날짜 (없으면 today.dateKey 폴백)
+  const activeDate = today.activeDate || today.dateKey || null;
   renderAsset(stu);
-  renderIdxCards('idxCards',today);
+  // activeDate가 있으면 그 날짜의 지수 데이터를 history에서 가져와서 표시
+  const idxData = await buildIdxDataForDate(activeDate);
+  renderIdxCards('idxCards', idxData);
+  updateIdxTitle('sIdxTitleDate', activeDate);
   renderInvestRows(stu);
   renderLog();
+  renderHistory('sHistoryBody', false);
+}
+
+// 특정 날짜 + 그 전 날짜의 지수를 묶어서 카드용 데이터 만들기
+async function buildIdxDataForDate(dateKey){
+  if(!dateKey) return {};
+  const cur = await getDoc(histRef(dateKey));
+  if(!cur.exists()) return {};
+  const c = cur.data();
+  // 이 날짜 이전의 가장 가까운 history 찾기 (전일 지수)
+  const all = await getHistory();
+  const earlier = all.filter(r => r.date < dateKey).sort((a,b)=>b.date.localeCompare(a.date));
+  const prev = earlier.length ? earlier[0] : null;
+  return {
+    steps: c.steps, cal: c.cal, yt: c.yt,
+    prev_steps: prev ? prev.steps : null,
+    prev_cal:   prev ? prev.cal   : null,
+    prev_yt:    prev ? prev.yt    : null,
+    dateKey: dateKey
+  };
+}
+
+function updateIdxTitle(spanId, dateKey){
+  const el = document.getElementById(spanId);
+  if(!el) return;
+  if(!dateKey){
+    el.textContent = '오늘';
+    el.classList.remove('past-disp');
+    return;
+  }
+  if(dateKey === todayKey()){
+    el.textContent = '오늘 ('+dateKeyToDisp(dateKey)+')';
+    el.classList.remove('past-disp');
+  } else {
+    el.textContent = dateKeyToDisp(dateKey);
+    el.classList.add('past-disp');
+  }
 }
 
 function renderAsset(stu){
@@ -410,12 +608,14 @@ function renderInvestRows(stu){
       '<span class="amt-chip '+(p.amt===x*100?'sel':'')+'" data-act="amt" data-key="'+idx.key+'" data-amt="'+(x*100)+'">'+x*100+'</span>'
     ).join('')+'<span class="amt-chip '+(p.amt===0?'sel':'')+'" data-act="amt" data-key="'+idx.key+'" data-amt="0">안 함</span>';
     const warn=p.pred==='down'&&p.amt>0?'<div class="warn-note">⚠ 하락 예측으로 투자하면 결과와 무관하게 손실이 발생해요.</div>':'';
+    const upLabel  = idx.invert ? '▲ 상승 예측 (시청 적을 것)' : '▲ 상승 예측';
+    const downLabel= idx.invert ? '▼ 하락 예측 (시청 많을 것)' : '▼ 하락 예측';
     return '<div class="invest-row '+(p.pred&&p.amt>0?'has-invest':'')+'">'+
       '<div class="irow-top">'+
         '<div class="irow-name">'+idx.emoji+' '+idx.name+'</div>'+
         '<div class="pred-row">'+
-          '<button class="pred-btn '+(p.pred==='up'?'sel-up':'')+'" data-act="pred" data-key="'+idx.key+'" data-pred="up">▲ 상승 예측</button>'+
-          '<button class="pred-btn '+(p.pred==='down'?'sel-down':'')+'" data-act="pred" data-key="'+idx.key+'" data-pred="down">▼ 하락 예측</button>'+
+          '<button class="pred-btn '+(p.pred==='up'?'sel-up':'')+'" data-act="pred" data-key="'+idx.key+'" data-pred="up">'+upLabel+'</button>'+
+          '<button class="pred-btn '+(p.pred==='down'?'sel-down':'')+'" data-act="pred" data-key="'+idx.key+'" data-pred="down">'+downLabel+'</button>'+
         '</div></div>'+
       '<div class="amt-row"><span class="amt-label">투자금 (캔)</span><div class="amt-chips">'+chips+'</div></div>'+
       warn+'</div>';
@@ -439,15 +639,28 @@ document.getElementById('investRows').addEventListener('click', (e)=>{
   if(t.dataset.act==='amt') handleAmt(key, Number(t.dataset.amt));
 });
 
+document.getElementById('tHistoryBody').addEventListener('click', (e)=>{
+  const t=e.target.closest('[data-act="del-hist"]');
+  if(!t) return;
+  deleteHistoryDate(t.dataset.date);
+});
+
 
 async function confirmInvest() {
   const stu=await getStu(currentSid);
+  const today=await getToday();
+  const investedAt = today.activeDate || today.dateKey || null;
   let total=0;
   const pending={};
   IDX.forEach(i=>{ if(plan[i.key].pred&&plan[i.key].amt>0){ total+=plan[i.key].amt; pending[i.key]={pred:plan[i.key].pred,amt:plan[i.key].amt}; } });
   if(total===0){toast('투자할 지수와 금액을 선택해주세요.');return;}
   if(total>stu.cash){toast('현금이 부족해요!');return;}
-  await updateDoc(stuRef(currentSid),{cash:stu.cash-total,invested:stu.invested+total,pending});
+  await updateDoc(stuRef(currentSid),{
+    cash:stu.cash-total,
+    invested:stu.invested+total,
+    pending,
+    pendingDate: investedAt
+  });
   resetPlan();
   toast('투자 완료! 선생님이 결산하면 결과를 확인할 수 있어요.');
   loadStudent();
@@ -466,13 +679,141 @@ async function renderLog(){
   ).join('');
 }
 
+async function renderHistory(tbodyId, allowDelete){
+  const tbody = document.getElementById(tbodyId);
+  if(!tbody) return;
+  const list = await getHistory();
+  if(!list.length){
+    tbody.innerHTML='<tr><td colspan="'+(allowDelete?6:5)+'" class="empty-cell">아직 결산된 지수 기록이 없어요.</td></tr>';
+    return;
+  }
+  // 주별 그룹핑
+  const byWeek = {};
+  list.forEach(r => {
+    const wk = r.week || weekKey(r.date);
+    (byWeek[wk] = byWeek[wk] || []).push(r);
+  });
+  const weekKeys = Object.keys(byWeek).sort();
+  let html = '';
+  weekKeys.forEach((wk, wi) => {
+    const rows = byWeek[wk].sort((a,b)=>a.date.localeCompare(b.date));
+    rows.forEach(r => {
+      const delBtn = allowDelete
+        ? '<button class="del-btn" data-act="del-hist" data-date="'+r.date+'" title="이 날짜 기록 삭제">✕</button>'
+        : '';
+      html += '<tr>'+
+        '<td>'+(wi+1)+'주차</td>'+
+        '<td><strong>'+dateKeyToDisp(r.date)+'</strong></td>'+
+        '<td>'+Number(r.steps).toLocaleString()+'</td>'+
+        '<td>'+Number(r.cal).toLocaleString()+'</td>'+
+        '<td>'+Number(r.yt).toLocaleString()+'</td>'+
+        (allowDelete ? '<td>'+delBtn+'</td>' : '')+
+      '</tr>';
+    });
+    // 주 평균 (5일 모두 입력된 경우만)
+    if(rows.length >= 5){
+      const avg = k => Math.round(rows.reduce((s,r)=>s+r[k],0) / rows.length);
+      html += '<tr class="avg-row">'+
+        '<td></td>'+
+        '<td><strong>'+(wi+1)+'주차 평균</strong></td>'+
+        '<td><strong>'+avg('steps').toLocaleString()+'</strong></td>'+
+        '<td><strong>'+avg('cal').toLocaleString()+'</strong></td>'+
+        '<td><strong>'+avg('yt').toLocaleString()+'</strong></td>'+
+        (allowDelete ? '<td></td>' : '')+
+      '</tr>';
+    } else if(rows.length > 0){
+      html += '<tr class="avg-row-pending">'+
+        '<td></td>'+
+        '<td colspan="'+(allowDelete?5:4)+'" style="color:var(--text-muted);font-size:11px">'+(wi+1)+'주차 — '+rows.length+'/5일 입력됨 (5일 모두 입력되면 평균이 표시돼요)</td>'+
+      '</tr>';
+    }
+  });
+  tbody.innerHTML = html;
+}
+
+async function deleteHistoryDate(dateKey){
+  if(!confirm(dateKeyToDisp(dateKey)+' 기록을 삭제할까요?\n(이미 결산된 학생 투자 결과는 되돌아가지 않아요)')) return;
+  try {
+    await deleteDoc(histRef(dateKey));
+    toast('기록 삭제 완료');
+    await renderHistory('tHistoryBody', true);
+  } catch(e){
+    toast('삭제 실패: '+e.message);
+  }
+}
+
 async function loadTeacher(){
   const today=await getToday();
-  if(today.steps) document.getElementById('ti_steps').value=today.steps;
-  if(today.cal)   document.getElementById('ti_cal').value=today.cal;
-  if(today.yt)    document.getElementById('ti_yt').value=today.yt;
+  // 날짜 input 기본값: 오늘
+  const dateInput = document.getElementById('ti_date');
+  if(!dateInput.value) dateInput.value = todayKey();
+  await fillTeacherInputsForDate(dateInput.value);
   renderIdxCards('tIdxCards',today);
+  updateIdxTitle('tIdxTitleDate', today.dateKey);
+  refreshDateDisp();
+  refreshActiveDateUI(today);
+  renderHistory('tHistoryBody', true);
   loadAdminTable();
+}
+
+function refreshActiveDateUI(today){
+  const ad = today && today.activeDate ? today.activeDate : (today && today.dateKey ? today.dateKey : null);
+  const disp = document.getElementById('activeDateDisp');
+  if(ad){
+    disp.textContent = dateKeyToDisp(ad);
+    if(ad === todayKey()) disp.classList.remove('past-disp'); else disp.classList.add('past-disp');
+  } else {
+    disp.textContent = '아직 설정 안 됨';
+    disp.classList.remove('past-disp');
+  }
+  const input = document.getElementById('activeDateInput');
+  if(!input.value && ad) input.value = ad;
+}
+
+async function applyActiveDate(){
+  const v = document.getElementById('activeDateInput').value;
+  if(!v){toast('날짜를 선택해주세요');return;}
+  // history에 그 날짜 데이터가 있는지 확인 (없으면 학생이 빈 화면 보게 됨 → 경고)
+  const histDoc = await getDoc(histRef(v));
+  if(!histDoc.exists()){
+    if(!confirm(dateKeyToDisp(v)+'에 입력된 지수가 없어요.\n그래도 학생 활성 날짜를 이 날짜로 설정할까요?\n(학생들은 빈 지수 화면을 보게 돼요)')) return;
+  }
+  const today = await getToday();
+  await setDoc(todayRef(), {...today, activeDate: v}, {merge:true});
+  toast('학생 활성 날짜를 '+dateKeyToDisp(v)+'(으)로 설정했어요');
+  const t2 = await getToday();
+  refreshActiveDateUI(t2);
+}
+
+// 선택한 날짜에 이미 history 데이터가 있으면 input에 미리 채워줌 (수정 편의)
+async function fillTeacherInputsForDate(dKey){
+  try {
+    const d = await getDoc(histRef(dKey));
+    if(d.exists()){
+      const data = d.data();
+      document.getElementById('ti_steps').value = data.steps || '';
+      document.getElementById('ti_cal').value   = data.cal   || '';
+      document.getElementById('ti_yt').value    = data.yt    || '';
+    } else {
+      document.getElementById('ti_steps').value = '';
+      document.getElementById('ti_cal').value   = '';
+      document.getElementById('ti_yt').value    = '';
+    }
+  } catch(e){ console.warn('fillTeacherInputsForDate 실패', e); }
+}
+
+function refreshDateDisp(){
+  const disp = document.getElementById('ti_date_disp');
+  const dKey = document.getElementById('ti_date').value;
+  if(!disp || !dKey){ if(disp) disp.textContent=''; return; }
+  const isToday = (dKey === todayKey());
+  if(isToday){
+    disp.textContent = '🟢 오늘 ('+dateKeyToDisp(dKey)+')';
+    disp.classList.remove('past');
+  } else {
+    disp.textContent = '🟠 '+dateKeyToDisp(dKey)+' 결산';
+    disp.classList.add('past');
+  }
 }
 
 async function loadAdminTable(){
@@ -511,44 +852,113 @@ async function resolveAll() {
   const steps=Number(document.getElementById('ti_steps').value);
   const cal  =Number(document.getElementById('ti_cal').value);
   const yt   =Number(document.getElementById('ti_yt').value);
+  const dKey = document.getElementById('ti_date').value || todayKey();
   if(!steps||!cal||!yt){toast('세 가지 지수를 모두 입력해주세요.');return;}
   const btn=document.getElementById('resolveBtn');
   btn.disabled=true; btn.textContent='결산 중...';
-  const today=await getToday();
-  const newToday={steps,cal,yt,prev_steps:today.steps??null,prev_cal:today.cal??null,prev_yt:today.yt??null};
-  await setDoc(todayRef(),newToday);
-  const risen={};
-  IDX.forEach(idx=>{
-    const c=newToday[idx.key],p=newToday['prev_'+idx.key];
-    if(p===null){risen[idx.key]=null;return;}
-    risen[idx.key]=idx.invert?(c<p):(c>p);
-  });
+
+  // history에 해당 날짜로 저장 (덮어쓰기)
+  await setDoc(histRef(dKey), {steps, cal, yt, week: weekKey(dKey), resolvedAt: Date.now()});
+
+  const msg=document.getElementById('resolveMsg');
+  msg.style.display='block';
+
+  // 정산 기준 날짜 = 학생들이 투자한 시점 = activeDate
+  const today = await getToday();
+  const activeDate = today.activeDate || null;
+
+  // activeDate가 결산 날짜보다 같거나 이후면 → 비교 불가, 정산 안 함 (학생들 보호)
+  if(!activeDate || activeDate >= dKey){
+    msg.innerHTML='✅ <strong>'+dateKeyToDisp(dKey)+'</strong> 지수 기록 완료. ' +
+      (activeDate ? '학생 활성 날짜('+dateKeyToDisp(activeDate)+')가 결산 날짜와 같거나 이후라서 투자 정산은 진행되지 않았어요.' : '학생 활성 날짜가 없어서 투자 정산은 진행되지 않았어요.') +
+      ' 학생 활성 날짜를 ' + dateKeyToDisp(dKey) + '(으)로 이동했어요.';
+    await setDoc(todayRef(), {...today, activeDate: dKey, steps, cal, yt, dateKey: dKey}, {merge:true});
+    btn.disabled=false; btn.textContent='결산하기 — 모든 학생 투자 반영';
+    document.getElementById('ti_steps').value='';
+    document.getElementById('ti_cal').value='';
+    document.getElementById('ti_yt').value='';
+    const t2 = await getToday();
+    refreshActiveDateUI(t2);
+    renderIdxCards('tIdxCards', await buildIdxDataForDate(dKey));
+    updateIdxTitle('tIdxTitleDate', dKey);
+    await renderHistory('tHistoryBody', true);
+    return;
+  }
+
+  // 정산: activeDate의 지수 데이터가 있는지 검증
+  const activeData = await getDoc(histRef(activeDate));
+  if(!activeData.exists()){
+    msg.innerHTML='⚠ 학생 활성 날짜('+dateKeyToDisp(activeDate)+')에 지수 데이터가 없어 정산할 수 없어요. 그 날짜 지수부터 먼저 입력해주세요.';
+    btn.disabled=false; btn.textContent='결산하기 — 모든 학생 투자 반영';
+    return;
+  }
+  const curD = {steps, cal, yt};
+
+  // 학생별로 정산 — 학생이 투자한 시점(pendingDate)을 기준으로 그 날짜와 dKey 비교
   const snap=await getDocs(collection(db,'students'));
   const results=[];
+  const histCache = {}; // 날짜별 history 캐시
+  async function getHistData(dateKey){
+    if(!dateKey) return null;
+    if(histCache[dateKey]) return histCache[dateKey];
+    const d = await getDoc(histRef(dateKey));
+    histCache[dateKey] = d.exists() ? d.data() : null;
+    return histCache[dateKey];
+  }
+
   for(const d of snap.docs){
     const stu=d.data();
     if(!stu.pending||!Object.keys(stu.pending).length) continue;
+    const stuFromDate = stu.pendingDate || activeDate;
+    if(!stuFromDate || stuFromDate >= dKey){
+      // 이 학생의 투자 시점이 결산 날짜와 같거나 이후 → 건드리지 않음
+      continue;
+    }
+    const prevForStu = await getHistData(stuFromDate);
+    if(!prevForStu) continue;
+    const risenStu = {};
+    IDX.forEach(idx=>{
+      const c=curD[idx.key], p=prevForStu[idx.key];
+      if(p==null){risenStu[idx.key]=null;return;}
+      risenStu[idx.key]=idx.invert?(c<p):(c>p);
+    });
     const logD=await getDoc(logRef(d.id));
     const entries=logD.exists()?(logD.data().entries||[]):[];
     let totalPnl=0;
     for(const key of Object.keys(stu.pending)){
-      const p=stu.pending[key],actualUp=risen[key];
+      const p=stu.pending[key],actualUp=risenStu[key];
       if(actualUp===null) continue;
       const rate=p.pred==='up'?(actualUp?5:-10):-10;
       const pnl=Math.round(p.amt*rate/100);
       totalPnl+=pnl;
-      entries.push({date:todayStr(),idx:IDX.find(i=>i.key===key).name,pred:p.pred,amt:p.amt,rate,pnl});
+      entries.push({date:dateKeyToDisp(stuFromDate)+'→'+dateKeyToDisp(dKey),idx:IDX.find(i=>i.key===key).name,pred:p.pred,amt:p.amt,rate,pnl});
     }
     const newCash=Math.max(0,stu.cash+stu.invested+totalPnl);
-    await updateDoc(doc(db,'students',d.id),{cash:newCash,invested:0,pending:{}});
+    await updateDoc(doc(db,'students',d.id),{cash:newCash,invested:0,pending:{},pendingDate:null});
     await setDoc(logRef(d.id),{entries});
     results.push(stu.name+' '+(totalPnl>=0?'+':'')+fmtC(totalPnl));
   }
+
+  // today 메타 갱신 + activeDate 자동 이동 (결산 날짜로)
+  const prevForMeta = activeData.data();
+  await setDoc(todayRef(), {
+    steps, cal, yt,
+    prev_steps: prevForMeta.steps ?? null,
+    prev_cal:   prevForMeta.cal   ?? null,
+    prev_yt:    prevForMeta.yt    ?? null,
+    dateKey: dKey,
+    activeDate: dKey
+  });
+
   btn.disabled=false; btn.textContent='결산하기 — 모든 학생 투자 반영';
-  const msg=document.getElementById('resolveMsg');
-  msg.style.display='block';
-  msg.textContent=results.length?'결산 완료 — '+results.join(' / '):'투자 중인 학생이 없어요.';
-  renderIdxCards('tIdxCards',newToday);
+  msg.textContent = results.length
+    ? '결산 완료 ('+dateKeyToDisp(activeDate)+'→'+dateKeyToDisp(dKey)+') — '+results.join(' / ')+'. 학생 활성 날짜를 '+dateKeyToDisp(dKey)+'(으)로 이동했어요.'
+    : '투자 중인 학생이 없어요. 학생 활성 날짜를 '+dateKeyToDisp(dKey)+'(으)로 이동했어요.';
+  renderIdxCards('tIdxCards', await buildIdxDataForDate(dKey));
+  updateIdxTitle('tIdxTitleDate', dKey);
+  const t3 = await getToday();
+  refreshActiveDateUI(t3);
+  await renderHistory('tHistoryBody', true);
   loadAdminTable();
 }
 
@@ -561,6 +971,18 @@ document.getElementById('stuLogoutBtn').addEventListener('click', logout);
 document.getElementById('tchLogoutBtn').addEventListener('click', logout);
 document.getElementById('confirmInvestBtn').addEventListener('click', confirmInvest);
 document.getElementById('resolveBtn').addEventListener('click', resolveAll);
+
+/* 날짜 선택 동작 */
+document.getElementById('ti_date').addEventListener('change', async ()=>{
+  await fillTeacherInputsForDate(document.getElementById('ti_date').value);
+  refreshDateDisp();
+});
+document.getElementById('todayBtn').addEventListener('click', async ()=>{
+  document.getElementById('ti_date').value = todayKey();
+  await fillTeacherInputsForDate(todayKey());
+  refreshDateDisp();
+});
+document.getElementById('applyActiveDateBtn').addEventListener('click', applyActiveDate);
 
 /* 엔터키로도 로그인 가능하게 */
 ['sNum','sName'].forEach(id=>{
