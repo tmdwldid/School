@@ -170,6 +170,27 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
 .del-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:11px;line-height:1;display:inline-flex;align-items:center;justify-content:center;font-family:'Noto Sans KR',sans-serif;transition:all .15s}
 .del-btn:hover{background:var(--red-bg);color:var(--red);border-color:var(--red)}
 
+/* 학생 상세 (선생님 화면) */
+.stu-table-hint{font-size:12px;color:var(--text-muted);margin-bottom:8px;padding:6px 10px;background:var(--gray-bg);border-radius:var(--radius-sm)}
+.stu-row{cursor:pointer}
+.stu-row:hover td{background:#FAFCFE}
+.expand-arrow{display:inline-block;width:14px;font-size:10px;color:var(--text-muted);transition:transform .15s}
+.stu-detail-row td{background:#FAFCFE!important;padding:0!important}
+.stu-detail-body{padding:16px 20px;border-left:3px solid var(--orange)}
+.detail-section-title{font-size:12px;font-weight:700;color:var(--navy);margin:0 0 8px;letter-spacing:.04em}
+.pending-list{background:#FFF8E1;border:1px solid #FFE082;border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:12px}
+.pending-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed #FFE082;font-size:13px}
+.pending-item:last-child{border-bottom:none}
+.cancel-pending-btn{background:#fff;border:1px solid var(--orange);color:var(--orange);padding:4px 10px;border-radius:var(--radius-sm);font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif}
+.cancel-pending-btn:hover{background:var(--orange);color:#fff}
+.detail-log-list{background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);max-height:280px;overflow-y:auto}
+.detail-log-item{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);font-size:12px}
+.detail-log-item:last-child{border-bottom:none}
+.detail-log-item .dl-left{color:var(--text-muted)}
+.detail-log-item .dl-right{font-weight:700;text-align:right}
+.del-log-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:10px;font-family:'Noto Sans KR',sans-serif}
+.del-log-btn:hover{background:var(--red-bg);color:var(--red);border-color:var(--red)}
+
 @media(max-width:500px){
   .asset-grid{grid-template-columns:repeat(2,1fr)}
   .idx-grid{grid-template-columns:1fr}
@@ -645,6 +666,16 @@ document.getElementById('tHistoryBody').addEventListener('click', (e)=>{
   deleteHistoryDate(t.dataset.date);
 });
 
+document.getElementById('adminContent').addEventListener('click', (e)=>{
+  // 취소 버튼 클릭은 행 펼치기 동작과 분리
+  const delLog = e.target.closest('[data-act="del-log"]');
+  if(delLog){ e.stopPropagation(); cancelLogEntry(delLog.dataset.sid, Number(delLog.dataset.idx)); return; }
+  const cancelPending = e.target.closest('[data-act="cancel-pending"]');
+  if(cancelPending){ e.stopPropagation(); cancelPendingItem(cancelPending.dataset.sid, cancelPending.dataset.key); return; }
+  const row = e.target.closest('[data-act="expand-stu"]');
+  if(row){ toggleStudentDetail(row.dataset.sid); }
+});
+
 
 async function confirmInvest() {
   const stu=await getStu(currentSid);
@@ -829,13 +860,15 @@ async function loadAdminTable(){
       '<div class="admin-stat-card"><div class="admin-stat-val">'+investing+'명</div><div class="admin-stat-label">현재 투자 중</div></div>'+
       '<div class="admin-stat-card"><div class="admin-stat-val">'+fmtC(avg)+'</div><div class="admin-stat-label">평균 자산</div></div>'+
     '</div>'+
+    '<div class="stu-table-hint">💡 학생 이름을 클릭하면 투자 기록을 보고, 잘못된 기록을 취소할 수 있어요.</div>'+
     '<div style="overflow-x:auto"><table class="stu-table">'+
-      '<thead><tr><th>순위</th><th>이름</th><th>학년/반/번</th><th>총 자산</th><th>현금</th><th>투자 중</th><th>수익률</th></tr></thead>'+
+      '<thead><tr><th></th><th>순위</th><th>이름</th><th>학년/반/번</th><th>총 자산</th><th>현금</th><th>투자 중</th><th>수익률</th></tr></thead>'+
       '<tbody>'+students.map((s,i)=>{
         const total=s.cash+s.invested;
         const roi=((total-s.totalStart)/s.totalStart*100).toFixed(1);
         const dot=s.pending&&Object.keys(s.pending).length>0?'<span class="pending-dot" title="투자 중"></span>':'';
-        return '<tr>'+
+        return '<tr class="stu-row" data-act="expand-stu" data-sid="'+s.sid+'">'+
+          '<td><span class="expand-arrow" id="arrow_'+s.sid+'">▶</span></td>'+
           '<td><span class="rank-badge '+rc(i)+'">'+(i+1)+'</span></td>'+
           '<td><strong>'+s.name+'</strong>'+dot+'</td>'+
           '<td style="color:var(--text-muted)">'+s.grade+'학년 '+s.cls+'반 '+s.num+'번</td>'+
@@ -843,9 +876,121 @@ async function loadAdminTable(){
           '<td>'+fmtC(s.cash)+'</td>'+
           '<td>'+fmtC(s.invested)+'</td>'+
           '<td style="color:'+(roi>=0?'var(--green)':'var(--red)')+';font-weight:700">'+(roi>=0?'+':'')+roi+'%</td>'+
-        '</tr>';
+        '</tr>'+
+        '<tr class="stu-detail-row" id="detail_'+s.sid+'" style="display:none"><td colspan="8"><div id="detail_body_'+s.sid+'" class="stu-detail-body">불러오는 중...</div></td></tr>';
       }).join('')+
       '</tbody></table></div>';
+}
+
+async function toggleStudentDetail(sid){
+  const row = document.getElementById('detail_'+sid);
+  const arrow = document.getElementById('arrow_'+sid);
+  if(!row) return;
+  if(row.style.display === 'none'){
+    row.style.display = '';
+    arrow.textContent = '▼';
+    await renderStudentDetail(sid);
+  } else {
+    row.style.display = 'none';
+    arrow.textContent = '▶';
+  }
+}
+
+async function renderStudentDetail(sid){
+  const body = document.getElementById('detail_body_'+sid);
+  if(!body) return;
+  const [stuDoc, logDoc] = await Promise.all([
+    getDoc(stuRef(sid)),
+    getDoc(logRef(sid))
+  ]);
+  const stu = stuDoc.exists() ? stuDoc.data() : null;
+  const entries = logDoc.exists() ? (logDoc.data().entries || []) : [];
+  if(!stu){ body.innerHTML='<div class="empty-note">학생 데이터를 찾을 수 없어요.</div>'; return; }
+
+  let pendingHtml = '';
+  if(stu.pending && Object.keys(stu.pending).length){
+    pendingHtml = '<div class="detail-section-title">현재 투자 중 (결산 전)</div>'+
+      '<div class="pending-list">'+
+      Object.keys(stu.pending).map(k=>{
+        const p = stu.pending[k];
+        const name = IDX.find(i=>i.key===k)?.name || k;
+        return '<div class="pending-item">'+
+          '<span>'+name+' · '+(p.pred==='up'?'▲ 상승':'▼ 하락')+' 예측 · '+fmtC(p.amt)+'</span>'+
+          '<button class="cancel-pending-btn" data-act="cancel-pending" data-sid="'+sid+'" data-key="'+k+'">취소</button>'+
+        '</div>';
+      }).join('')+
+      '</div>';
+  }
+
+  let logHtml = '';
+  if(!entries.length){
+    logHtml = '<div class="empty-note">결산된 투자 기록이 없어요.</div>';
+  } else {
+    logHtml = '<div class="detail-section-title">결산된 투자 기록 (✕로 취소 시 돈도 되돌려요)</div>'+
+      '<div class="detail-log-list">'+
+      [...entries].map((l,idx)=>(
+        '<div class="detail-log-item">'+
+          '<div class="dl-left">'+l.date+' · '+l.idx+' · '+(l.pred==='up'?'▲ 상승':'▼ 하락')+' 예측 · '+fmtC(l.amt)+'</div>'+
+          '<div class="dl-right '+(l.pnl>=0?'log-plus':'log-minus')+'">'+(l.pnl>=0?'+':'')+fmtC(Math.abs(l.pnl))+' ('+(l.pnl>=0?'+':'')+l.rate+'%)</div>'+
+          '<button class="del-log-btn" data-act="del-log" data-sid="'+sid+'" data-idx="'+idx+'" title="이 기록 취소 + 돈 되돌리기">✕</button>'+
+        '</div>'
+      )).reverse().join('')+
+      '</div>';
+  }
+
+  body.innerHTML = pendingHtml + logHtml;
+}
+
+async function cancelPendingItem(sid, key){
+  if(!confirm('이 미결산 투자를 취소하고 투자금을 학생에게 돌려줄까요?')) return;
+  try {
+    const stuDoc = await getDoc(stuRef(sid));
+    if(!stuDoc.exists()){ toast('학생을 찾을 수 없어요'); return; }
+    const stu = stuDoc.data();
+    if(!stu.pending || !stu.pending[key]){ toast('해당 투자가 이미 없어요'); return; }
+    const amt = stu.pending[key].amt || 0;
+    const newPending = {...stu.pending};
+    delete newPending[key];
+    await updateDoc(stuRef(sid), {
+      cash: stu.cash + amt,
+      invested: Math.max(0, stu.invested - amt),
+      pending: newPending,
+      pendingDate: Object.keys(newPending).length ? stu.pendingDate : null
+    });
+    toast('투자 취소 완료 ('+fmtC(amt)+' 환불)');
+    await renderStudentDetail(sid);
+    loadAdminTable();
+  } catch(e){ toast('취소 실패: '+e.message); }
+}
+
+async function cancelLogEntry(sid, idx){
+  const stuDoc = await getDoc(stuRef(sid));
+  const logDoc = await getDoc(logRef(sid));
+  if(!stuDoc.exists() || !logDoc.exists()){ toast('데이터를 찾을 수 없어요'); return; }
+  const stu = stuDoc.data();
+  const entries = logDoc.data().entries || [];
+  const target = entries[idx];
+  if(!target){ toast('해당 기록이 없어요'); return; }
+  const pnl = target.pnl || 0;
+  const amt = target.amt || 0;
+  // 되돌릴 금액 = 원래 투자금(원금) + 손익 - 즉 결산 시 받았던 (amt + pnl)을 빼고, 원래 캔에서 amt를 다시 빼야 함
+  // 결산 처리: 캔에 amt + pnl 들어옴 (원금 환급 + 손익)
+  // 취소: 캔에서 amt + pnl 빼기 → 마치 투자를 안 한 것처럼 됨
+  const adjust = amt + pnl;
+  const newCash = stu.cash - adjust;
+  if(newCash < 0){
+    if(!confirm('이 기록을 취소하면 학생 캔이 마이너스(' + newCash + '캔)가 돼요.\n그래도 진행할까요? (보통은 잔액 부족이라 권장하지 않아요)')) return;
+  } else {
+    if(!confirm(target.date+' · '+target.idx+' 투자 기록을 취소할까요?\n학생 캔에서 '+fmtC(adjust)+'을(를) 빼고 기록을 삭제해요.\n(취소 후 캔: '+fmtC(newCash)+')')) return;
+  }
+  try {
+    const newEntries = entries.filter((_,i)=>i!==idx);
+    await updateDoc(stuRef(sid), { cash: newCash });
+    await setDoc(logRef(sid), { entries: newEntries });
+    toast('기록 취소 완료');
+    await renderStudentDetail(sid);
+    loadAdminTable();
+  } catch(e){ toast('취소 실패: '+e.message); }
 }
 
 async function resolveAll() {
