@@ -119,6 +119,17 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
 
+/* 보유 현황 */
+.holding-item{background:#F8FAFD;border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px}
+.holding-item:last-child{margin-bottom:0}
+.hi-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.hi-name{font-size:14px;color:var(--text)}
+.hi-value{font-size:18px;font-weight:700;color:var(--navy)}
+.hi-pred-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.hi-pred-label{font-size:12px;color:var(--text-muted);margin-right:4px}
+.sell-btn{margin-left:auto;padding:6px 14px;background:var(--orange);color:var(--navy);border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif}
+.sell-btn:hover{opacity:.85}
+
 /* 수익률 안내 카드 */
 .rate-info-card{background:#FAFCFE;border:1px solid var(--blue-light)}
 
@@ -259,10 +270,14 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
     <div class="idx-grid" id="idxCards"></div>
   </div>
   <div class="card">
-    <div class="card-title">오늘 투자하기</div>
+    <div class="card-title">💼 내 보유 현황</div>
+    <div id="holdingsList"><div class="empty-note">보유 중인 지수가 없어요. 아래에서 매수해보세요.</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📈 매수하기</div>
     <div id="investRows"></div>
   </div>
-  <button class="confirm-btn" id="confirmInvestBtn">투자 확정하기</button>
+  <button class="confirm-btn" id="confirmInvestBtn">매수 확정하기</button>
   <div class="card rate-info-card">
     <div class="rate-row">
       <div class="rate-item rate-up"><span class="rate-icon">▲</span> 예측 적중 시 <strong>+5%</strong></div>
@@ -547,9 +562,37 @@ async function loadStudent(){
   const idxData = await buildIdxDataForDate(activeDate);
   renderIdxCards('idxCards', idxData);
   updateIdxTitle('sIdxTitleDate', activeDate);
+  renderHoldings(stu);
   renderInvestRows(stu);
   renderLog();
   renderHistory('sHistoryBody', false);
+}
+
+function renderHoldings(stu){
+  const holdings = stu.holdings || {};
+  const keys = Object.keys(holdings);
+  const el = document.getElementById('holdingsList');
+  if(!keys.length){
+    el.innerHTML = '<div class="empty-note">보유 중인 지수가 없어요. 아래에서 매수해보세요.</div>';
+    return;
+  }
+  el.innerHTML = keys.map(key => {
+    const h = holdings[key];
+    const idx = IDX.find(i=>i.key===key);
+    if(!idx) return '';
+    return `<div class="holding-item">
+      <div class="hi-head">
+        <div class="hi-name">${idx.emoji} <strong>${idx.name}</strong></div>
+        <div class="hi-value">${fmtC(h.value)}</div>
+      </div>
+      <div class="hi-pred-row">
+        <span class="hi-pred-label">예측 방향:</span>
+        <button class="pred-btn ${h.pred==='up'?'sel-up':''}" data-act="hold-pred" data-key="${key}" data-pred="up">▲ 상승</button>
+        <button class="pred-btn ${h.pred==='down'?'sel-down':''}" data-act="hold-pred" data-key="${key}" data-pred="down">▼ 하락</button>
+        <button class="sell-btn" data-act="sell" data-key="${key}">💰 매도</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // 특정 날짜 + 그 전 날짜의 지수를 묶어서 카드용 데이터 만들기
@@ -589,16 +632,18 @@ function updateIdxTitle(spanId, dateKey){
 }
 
 function renderAsset(stu){
-  const total=stu.cash+stu.invested;
+  const holdings = stu.holdings || {};
+  const holdingsValue = Object.values(holdings).reduce((s,h)=>s+(h.value||0),0);
+  const total = stu.cash + holdingsValue;
   const roi=((total-stu.totalStart)/stu.totalStart*100).toFixed(1);
   const cashPct=total>0?Math.round(stu.cash/total*100):100;
-  const invPct=total>0?Math.round(stu.invested/total*100):0;
+  const invPct=total>0?Math.round(holdingsValue/total*100):0;
   document.getElementById('assetCard').innerHTML=`
     <div class="card-title">내 자산 현황</div>
     <div class="asset-grid">
       <div class="asset-stat"><div class="asset-label">총 자산</div><div class="asset-val">${fmtC(total)}</div></div>
       <div class="asset-stat"><div class="asset-label">현금</div><div class="asset-val">${fmtC(stu.cash)}</div></div>
-      <div class="asset-stat"><div class="asset-label">투자 중</div><div class="asset-val">${fmtC(stu.invested)}</div></div>
+      <div class="asset-stat"><div class="asset-label">보유</div><div class="asset-val">${fmtC(holdingsValue)}</div></div>
       <div class="asset-stat"><div class="asset-label">수익률</div><div class="asset-val ${roi>=0?'up':'down'}">${roi>=0?'+':''}${roi}%</div></div>
     </div>
     <div class="pbar-wrap">
@@ -606,7 +651,7 @@ function renderAsset(stu){
       <div class="pbar"><div class="pbar-fill fill-cash" style="width:${cashPct}%"></div></div>
     </div>
     <div class="pbar-wrap">
-      <div class="pbar-label"><span>투자 비중</span><span>${invPct}%</span></div>
+      <div class="pbar-label"><span>보유 비중</span><span>${invPct}%</span></div>
       <div class="pbar"><div class="pbar-fill fill-inv" style="width:${invPct}%"></div></div>
     </div>`;
 }
@@ -689,6 +734,14 @@ document.getElementById('investRows').addEventListener('click', (e)=>{
   if(t.dataset.act==='amt') handleAmt(key, Number(t.dataset.amt));
 });
 
+document.getElementById('holdingsList').addEventListener('click', (e)=>{
+  const t=e.target.closest('[data-act]');
+  if(!t) return;
+  const key=t.dataset.key;
+  if(t.dataset.act==='hold-pred') changePrediction(key, t.dataset.pred);
+  if(t.dataset.act==='sell') sellHolding(key);
+});
+
 document.getElementById('tHistoryBody').addEventListener('click', (e)=>{
   const t=e.target.closest('[data-act="del-hist"]');
   if(!t) return;
@@ -699,8 +752,8 @@ document.getElementById('adminContent').addEventListener('click', (e)=>{
   // 취소 버튼 클릭은 행 펼치기 동작과 분리
   const delLog = e.target.closest('[data-act="del-log"]');
   if(delLog){ e.stopPropagation(); cancelLogEntry(delLog.dataset.sid, Number(delLog.dataset.idx)); return; }
-  const cancelPending = e.target.closest('[data-act="cancel-pending"]');
-  if(cancelPending){ e.stopPropagation(); cancelPendingItem(cancelPending.dataset.sid, cancelPending.dataset.key); return; }
+  const cancelHolding = e.target.closest('[data-act="cancel-holding"]');
+  if(cancelHolding){ e.stopPropagation(); cancelHoldingItem(cancelHolding.dataset.sid, cancelHolding.dataset.key); return; }
   const resetStu = e.target.closest('[data-act="reset-stu"]');
   if(resetStu){ e.stopPropagation(); resetStudent(resetStu.dataset.sid); return; }
   const row = e.target.closest('[data-act="expand-stu"]');
@@ -712,19 +765,84 @@ async function confirmInvest() {
   const stu=await getStu(currentSid);
   const today=await getToday();
   const investedAt = today.activeDate || today.dateKey || null;
+
   let total=0;
-  const pending={};
-  IDX.forEach(i=>{ if(plan[i.key].pred&&plan[i.key].amt>0){ total+=plan[i.key].amt; pending[i.key]={pred:plan[i.key].pred,amt:plan[i.key].amt}; } });
+  const newHoldings = {...(stu.holdings||{})};
+  IDX.forEach(i=>{
+    const p = plan[i.key];
+    if(p.pred && p.amt > 0){
+      total += p.amt;
+      const prev = newHoldings[i.key];
+      if(prev){
+        // 이미 보유 중이면 합산 (가치 누적), 예측 방향은 새 값으로 갱신
+        newHoldings[i.key] = {
+          value: (prev.value || 0) + p.amt,
+          pred:  p.pred,
+          lastSettled: investedAt
+        };
+      } else {
+        newHoldings[i.key] = {
+          value: p.amt,
+          pred:  p.pred,
+          lastSettled: investedAt
+        };
+      }
+    }
+  });
+
   if(total===0){toast('투자할 지수와 금액을 선택해주세요.');return;}
   if(total>stu.cash){toast('현금이 부족해요!');return;}
+
   await updateDoc(stuRef(currentSid),{
-    cash:stu.cash-total,
-    invested:stu.invested+total,
-    pending,
-    pendingDate: investedAt
+    cash: stu.cash - total,
+    holdings: newHoldings
   });
   resetPlan();
-  toast('투자 완료! 선생님이 결산하면 결과를 확인할 수 있어요.');
+  toast('매수 완료! 결산 후 보유 가치가 변동돼요.');
+  loadStudent();
+}
+
+async function sellHolding(key){
+  const stu = await getStu(currentSid);
+  const h = (stu.holdings || {})[key];
+  if(!h || !h.value){ toast('이 지수에 보유분이 없어요'); return; }
+  const idxName = IDX.find(i=>i.key===key)?.name || key;
+  if(!confirm(idxName+' 보유분 '+fmtC(h.value)+'을(를) 매도해서 현금으로 바꿀까요?')) return;
+  const newHoldings = {...stu.holdings};
+  delete newHoldings[key];
+  // logs에 매도 기록 추가
+  const logD = await getDoc(logRef(currentSid));
+  const entries = logD.exists() ? (logD.data().entries || []) : [];
+  entries.push({
+    date: dateKeyToDisp(todayKey()),
+    idx: idxName,
+    type: 'sell',
+    amt: h.value,
+    pnl: 0,
+    rate: 0,
+    note: '매도 → 현금화'
+  });
+  await updateDoc(stuRef(currentSid), {
+    cash: stu.cash + h.value,
+    holdings: newHoldings
+  });
+  await setDoc(logRef(currentSid), { entries });
+  toast(fmtC(h.value)+' 매도 완료');
+  loadStudent();
+}
+
+async function changePrediction(key, newPred){
+  const stu = await getStu(currentSid);
+  const h = (stu.holdings || {})[key];
+  if(!h) return;
+  if(h.pred === newPred){
+    // 같은 예측 다시 누르면 해제 안 됨 (예측은 항상 있어야 함)
+    return;
+  }
+  const newHoldings = {...stu.holdings};
+  newHoldings[key] = {...h, pred: newPred};
+  await updateDoc(stuRef(currentSid), { holdings: newHoldings });
+  toast('예측 방향 변경: '+(newPred==='up'?'▲ 상승':'▼ 하락'));
   loadStudent();
 }
 
@@ -733,12 +851,19 @@ async function renderLog(){
   const logs=d.exists()?(d.data().entries||[]):[];
   const el=document.getElementById('investLog');
   if(!logs.length){el.innerHTML='<div class="empty-note">아직 투자 기록이 없어요.</div>';return;}
-  el.innerHTML=[...logs].reverse().map(l=>
-    '<div class="log-item">'+
-      '<div class="log-left">'+l.date+' · '+l.idx+' · '+(l.pred==='up'?'▲ 상승':'▼ 하락')+' 예측 · '+fmtC(l.amt)+'</div>'+
-      '<div class="log-right '+(l.pnl>=0?'log-plus':'log-minus')+'">'+(l.pnl>=0?'+':'')+fmtC(Math.abs(l.pnl))+' ('+(l.pnl>=0?'+':'')+l.rate+'%)</div>'+
-    '</div>'
-  ).join('');
+  el.innerHTML=[...logs].reverse().map(l=>{
+    if(l.type === 'sell'){
+      return '<div class="log-item">'+
+        '<div class="log-left">'+l.date+' · '+l.idx+' · 💰 매도 '+fmtC(l.amt)+'</div>'+
+        '<div class="log-right" style="color:var(--blue)">현금화</div>'+
+      '</div>';
+    }
+    const pnl = l.pnl || 0;
+    return '<div class="log-item">'+
+      '<div class="log-left">'+l.date+' · '+l.idx+' · '+(l.pred==='up'?'▲ 상승':'▼ 하락')+' 예측 · 평가 '+fmtC(l.amt||0)+'</div>'+
+      '<div class="log-right '+(pnl>=0?'log-plus':'log-minus')+'">'+(pnl>=0?'+':'')+fmtC(Math.abs(pnl))+' ('+(pnl>=0?'+':'')+(l.rate||0)+'%)</div>'+
+    '</div>';
+  }).join('');
 }
 
 async function renderHistory(tbodyId, allowDelete){
@@ -881,23 +1006,25 @@ function refreshDateDisp(){
 async function loadAdminTable(){
   const snap=await getDocs(collection(db,'students'));
   const students=snap.docs.map(d=>({...d.data(),sid:d.id}));
-  students.sort((a,b)=>(b.cash+b.invested)-(a.cash+a.invested));
-  const investing=students.filter(s=>s.pending&&Object.keys(s.pending).length>0).length;
-  const avg=students.length?Math.round(students.reduce((s,a)=>s+a.cash+a.invested,0)/students.length):0;
+  const holdSum = s => Object.values(s.holdings||{}).reduce((t,h)=>t+(h.value||0),0);
+  students.forEach(s=>{ s._held = holdSum(s); });
+  students.sort((a,b)=>(b.cash+b._held)-(a.cash+a._held));
+  const investing=students.filter(s=>s._held > 0).length;
+  const avg=students.length?Math.round(students.reduce((acc,a)=>acc+a.cash+a._held,0)/students.length):0;
   const rc=i=>i===0?'rank-gold':i===1?'rank-silver':i===2?'rank-bronze':'';
   document.getElementById('adminContent').innerHTML=
     '<div class="admin-stats">'+
       '<div class="admin-stat-card"><div class="admin-stat-val">'+students.length+'명</div><div class="admin-stat-label">총 학생 수</div></div>'+
-      '<div class="admin-stat-card"><div class="admin-stat-val">'+investing+'명</div><div class="admin-stat-label">현재 투자 중</div></div>'+
+      '<div class="admin-stat-card"><div class="admin-stat-val">'+investing+'명</div><div class="admin-stat-label">현재 보유 중</div></div>'+
       '<div class="admin-stat-card"><div class="admin-stat-val">'+fmtC(avg)+'</div><div class="admin-stat-label">평균 자산</div></div>'+
     '</div>'+
     '<div class="stu-table-hint">💡 학생 이름을 클릭하면 투자 기록을 보고, 잘못된 기록을 취소할 수 있어요.</div>'+
     '<div style="overflow-x:auto"><table class="stu-table">'+
-      '<thead><tr><th></th><th>순위</th><th>이름</th><th>학년/반/번</th><th>총 자산</th><th>현금</th><th>투자 중</th><th>수익률</th></tr></thead>'+
+      '<thead><tr><th></th><th>순위</th><th>이름</th><th>학년/반/번</th><th>총 자산</th><th>현금</th><th>보유</th><th>수익률</th></tr></thead>'+
       '<tbody>'+students.map((s,i)=>{
-        const total=s.cash+s.invested;
+        const total=s.cash + s._held;
         const roi=((total-s.totalStart)/s.totalStart*100).toFixed(1);
-        const dot=s.pending&&Object.keys(s.pending).length>0?'<span class="pending-dot" title="투자 중"></span>':'';
+        const dot=s._held > 0 ?'<span class="pending-dot" title="보유 중"></span>':'';
         return '<tr class="stu-row" data-act="expand-stu" data-sid="'+s.sid+'">'+
           '<td><span class="expand-arrow" id="arrow_'+s.sid+'">▶</span></td>'+
           '<td><span class="rank-badge '+rc(i)+'">'+(i+1)+'</span></td>'+
@@ -905,7 +1032,7 @@ async function loadAdminTable(){
           '<td style="color:var(--text-muted)">'+s.grade+'학년 '+s.cls+'반 '+s.num+'번</td>'+
           '<td><strong>'+fmtC(total)+'</strong></td>'+
           '<td>'+fmtC(s.cash)+'</td>'+
-          '<td>'+fmtC(s.invested)+'</td>'+
+          '<td>'+fmtC(s._held)+'</td>'+
           '<td style="color:'+(roi>=0?'var(--green)':'var(--red)')+';font-weight:700">'+(roi>=0?'+':'')+roi+'%</td>'+
         '</tr>'+
         '<tr class="stu-detail-row" id="detail_'+s.sid+'" style="display:none"><td colspan="8"><div id="detail_body_'+s.sid+'" class="stu-detail-body">불러오는 중...</div></td></tr>';
@@ -938,16 +1065,17 @@ async function renderStudentDetail(sid){
   const entries = logDoc.exists() ? (logDoc.data().entries || []) : [];
   if(!stu){ body.innerHTML='<div class="empty-note">학생 데이터를 찾을 수 없어요.</div>'; return; }
 
-  let pendingHtml = '';
-  if(stu.pending && Object.keys(stu.pending).length){
-    pendingHtml = '<div class="detail-section-title">현재 투자 중 (결산 전)</div>'+
+  let holdingsHtml = '';
+  const holdings = stu.holdings || {};
+  if(Object.keys(holdings).length){
+    holdingsHtml = '<div class="detail-section-title">현재 보유 현황</div>'+
       '<div class="pending-list">'+
-      Object.keys(stu.pending).map(k=>{
-        const p = stu.pending[k];
+      Object.keys(holdings).map(k=>{
+        const h = holdings[k];
         const name = IDX.find(i=>i.key===k)?.name || k;
         return '<div class="pending-item">'+
-          '<span>'+name+' · '+(p.pred==='up'?'▲ 상승':'▼ 하락')+' 예측 · '+fmtC(p.amt)+'</span>'+
-          '<button class="cancel-pending-btn" data-act="cancel-pending" data-sid="'+sid+'" data-key="'+k+'">취소</button>'+
+          '<span>'+name+' · '+(h.pred==='up'?'▲ 상승':'▼ 하락')+' 예측 · 평가액 '+fmtC(h.value)+'</span>'+
+          '<button class="cancel-pending-btn" data-act="cancel-holding" data-sid="'+sid+'" data-key="'+k+'">보유 취소(원금 환불)</button>'+
         '</div>';
       }).join('')+
       '</div>';
@@ -955,41 +1083,53 @@ async function renderStudentDetail(sid){
 
   let logHtml = '';
   if(!entries.length){
-    logHtml = '<div class="empty-note">결산된 투자 기록이 없어요.</div>';
+    logHtml = '<div class="empty-note">투자 기록이 없어요.</div>';
   } else {
-    logHtml = '<div class="detail-section-title">결산된 투자 기록 (✕로 취소 시 돈도 되돌려요)</div>'+
+    logHtml = '<div class="detail-section-title">투자 기록 (✕로 결산 손익 되돌리기)</div>'+
       '<div class="detail-log-list">'+
-      [...entries].map((l,idx)=>(
-        '<div class="detail-log-item">'+
-          '<div class="dl-left">'+l.date+' · '+l.idx+' · '+(l.pred==='up'?'▲ 상승':'▼ 하락')+' 예측 · '+fmtC(l.amt)+'</div>'+
-          '<div class="dl-right '+(l.pnl>=0?'log-plus':'log-minus')+'">'+(l.pnl>=0?'+':'')+fmtC(Math.abs(l.pnl))+' ('+(l.pnl>=0?'+':'')+l.rate+'%)</div>'+
-          '<button class="del-log-btn" data-act="del-log" data-sid="'+sid+'" data-idx="'+idx+'" title="이 기록 취소 + 돈 되돌리기">✕</button>'+
-        '</div>'
-      )).reverse().join('')+
+      [...entries].map((l,idx)=>{
+        const isSell = l.type === 'sell';
+        const isSettle = l.type === 'settle' || (!l.type && typeof l.pnl !== 'undefined'); // 구버전 호환
+        const left = isSell
+          ? l.date+' · '+l.idx+' · 💰 매도 '+fmtC(l.amt)
+          : l.date+' · '+l.idx+' · '+(l.pred==='up'?'▲ 상승':'▼ 하락')+' 예측 · 평가 '+fmtC(l.amt||0);
+        const right = isSell
+          ? '<div class="dl-right">현금화</div>'
+          : '<div class="dl-right '+(l.pnl>=0?'log-plus':'log-minus')+'">'+(l.pnl>=0?'+':'')+fmtC(Math.abs(l.pnl||0))+' ('+(l.pnl>=0?'+':'')+(l.rate||0)+'%)</div>';
+        const delBtn = isSettle
+          ? '<button class="del-log-btn" data-act="del-log" data-sid="'+sid+'" data-idx="'+idx+'" title="이 결산 손익 취소">✕</button>'
+          : '<span style="width:22px"></span>';
+        return '<div class="detail-log-item">'+
+          '<div class="dl-left">'+left+'</div>'+
+          right+
+          delBtn+
+        '</div>';
+      }).reverse().join('')+
       '</div>';
   }
 
   const dangerHtml = '<div class="danger-zone">'+
     '<div class="dz-title">⚠ 위험 영역</div>'+
-    '<div class="dz-desc">이 학생의 자산을 처음 상태(1,000캔, 투자 0, 기록 0)로 완전히 초기화해요.</div>'+
+    '<div class="dz-desc">이 학생의 자산을 처음 상태(1,000캔, 보유 0, 기록 0)로 완전히 초기화해요.</div>'+
     '<button class="reset-stu-btn" data-act="reset-stu" data-sid="'+sid+'">자산 초기화</button>'+
   '</div>';
 
-  body.innerHTML = pendingHtml + logHtml + dangerHtml;
+  body.innerHTML = holdingsHtml + logHtml + dangerHtml;
 }
 
 async function resetStudent(sid){
   const stuDoc = await getDoc(stuRef(sid));
   if(!stuDoc.exists()){ toast('학생을 찾을 수 없어요'); return; }
   const stu = stuDoc.data();
-  if(!confirm(stu.name+' 학생의 자산을 완전히 초기화할까요?\n• 현금 1,000캔으로 리셋\n• 투자 중 모두 취소\n• 모든 결산 기록 삭제\n\n되돌릴 수 없어요.')) return;
+  if(!confirm(stu.name+' 학생의 자산을 완전히 초기화할까요?\n• 현금 1,000캔으로 리셋\n• 보유분 모두 삭제\n• 모든 기록 삭제\n\n되돌릴 수 없어요.')) return;
   try {
     await updateDoc(stuRef(sid), {
       cash: 1000,
       invested: 0,
       totalStart: 1000,
       pending: {},
-      pendingDate: null
+      pendingDate: null,
+      holdings: {}
     });
     await setDoc(logRef(sid), { entries: [] });
     toast(stu.name+' 학생 자산 초기화 완료');
@@ -998,23 +1138,21 @@ async function resetStudent(sid){
   } catch(e){ toast('초기화 실패: '+e.message); }
 }
 
-async function cancelPendingItem(sid, key){
-  if(!confirm('이 미결산 투자를 취소하고 투자금을 학생에게 돌려줄까요?')) return;
+async function cancelHoldingItem(sid, key){
+  const stuDoc = await getDoc(stuRef(sid));
+  if(!stuDoc.exists()){ toast('학생을 찾을 수 없어요'); return; }
+  const stu = stuDoc.data();
+  const h = (stu.holdings || {})[key];
+  if(!h){ toast('해당 보유분이 없어요'); return; }
+  if(!confirm('이 보유분('+fmtC(h.value)+')을 학생 캔으로 돌려줄까요?')) return;
   try {
-    const stuDoc = await getDoc(stuRef(sid));
-    if(!stuDoc.exists()){ toast('학생을 찾을 수 없어요'); return; }
-    const stu = stuDoc.data();
-    if(!stu.pending || !stu.pending[key]){ toast('해당 투자가 이미 없어요'); return; }
-    const amt = stu.pending[key].amt || 0;
-    const newPending = {...stu.pending};
-    delete newPending[key];
+    const newHoldings = {...stu.holdings};
+    delete newHoldings[key];
     await updateDoc(stuRef(sid), {
-      cash: stu.cash + amt,
-      invested: Math.max(0, stu.invested - amt),
-      pending: newPending,
-      pendingDate: Object.keys(newPending).length ? stu.pendingDate : null
+      cash: stu.cash + h.value,
+      holdings: newHoldings
     });
-    toast('투자 취소 완료 ('+fmtC(amt)+' 환불)');
+    toast('보유 취소 완료 ('+fmtC(h.value)+' 환불)');
     await renderStudentDetail(sid);
     loadAdminTable();
   } catch(e){ toast('취소 실패: '+e.message); }
@@ -1028,24 +1166,48 @@ async function cancelLogEntry(sid, idx){
   const entries = logDoc.data().entries || [];
   const target = entries[idx];
   if(!target){ toast('해당 기록이 없어요'); return; }
+  if(target.type === 'sell'){ toast('매도 기록은 직접 취소할 수 없어요'); return; }
   const pnl = target.pnl || 0;
-  // 결산 시 학생 캔에는 (원금 amt + 손익 pnl)이 들어왔음.
-  // 취소 = "이 투자가 없었던 것처럼" → 캔에서 pnl만 빼면 됨.
-  //   pnl이 +5면 newCash = cash - 5 (이득 반납)
-  //   pnl이 -10이면 newCash = cash - (-10) = cash + 10 (손실 복구)
-  const newCash = stu.cash - pnl;
+  // 이 결산이 만든 손익(pnl)을 되돌려야 함.
+  // 케이스 1: 학생이 그 지수를 아직 보유 중 → holdings.value에서 pnl을 빼면 결산 전 가치로 복구
+  // 케이스 2: 이미 매도해서 보유 없음 → 캔에서 pnl 차감 (회계상 동일)
+  // 지수 키 추정: target.idx (이름)으로 IDX 찾기
+  const idxMeta = IDX.find(i => i.name === target.idx);
+  const key = idxMeta ? idxMeta.key : null;
+  const holdings = stu.holdings || {};
+  const h = key ? holdings[key] : null;
+
+  let mode, newCash = stu.cash, newHoldings = {...holdings};
+  if(h && pnl !== 0){
+    mode = 'holdings';
+    newHoldings[key] = {...h, value: Math.max(0, (h.value||0) - pnl)};
+  } else if(pnl !== 0){
+    mode = 'cash';
+    newCash = stu.cash - pnl;
+  } else {
+    mode = 'none';
+  }
+
   let msgLine;
   if(pnl === 0){
-    msgLine = '이 기록을 취소할까요? (손익이 0이라 캔은 그대로예요)';
-  } else if(pnl > 0){
-    msgLine = '이 기록은 +'+fmtC(pnl)+' 이득이었어요.\n취소하면 그 이득을 회수해서 캔이 줄어요.\n\n현재: '+fmtC(stu.cash)+' → 취소 후: '+fmtC(newCash);
-  } else {
-    msgLine = '이 기록은 '+fmtC(pnl)+' 손실이었어요.\n취소하면 그 손실을 복구해서 캔이 늘어요.\n\n현재: '+fmtC(stu.cash)+' → 취소 후: '+fmtC(newCash);
+    msgLine = '이 기록을 취소할까요? (손익이 0이라 자산은 그대로예요)';
+  } else if(mode === 'holdings'){
+    const sign = pnl >= 0 ? '+' : '';
+    msgLine = '이 결산은 '+sign+fmtC(pnl)+' 손익이었어요.\n취소하면 '+target.idx+' 보유분 평가액에서 손익을 되돌려요.\n\n현재 보유: '+fmtC(h.value)+' → 취소 후: '+fmtC(newHoldings[key].value);
+  } else { // cash
+    msgLine = (pnl>0
+      ? '이 결산은 +'+fmtC(pnl)+' 이득이었어요 (이미 매도됨).\n취소하면 학생 캔에서 그만큼 회수해요.'
+      : '이 결산은 '+fmtC(pnl)+' 손실이었어요 (이미 매도됨).\n취소하면 학생 캔에 그만큼 돌려줘요.')+
+      '\n\n현재 캔: '+fmtC(stu.cash)+' → 취소 후: '+fmtC(newCash);
   }
   if(!confirm(target.date+' · '+target.idx+'\n\n'+msgLine)) return;
+
   try {
     const newEntries = entries.filter((_,i)=>i!==idx);
-    await updateDoc(stuRef(sid), { cash: newCash });
+    const update = {};
+    if(mode === 'holdings') update.holdings = newHoldings;
+    if(mode === 'cash')     update.cash = newCash;
+    if(Object.keys(update).length) await updateDoc(stuRef(sid), update);
     await setDoc(logRef(sid), { entries: newEntries });
     toast('기록 취소 완료');
     await renderStudentDetail(sid);
@@ -1099,7 +1261,7 @@ async function resolveAll() {
   }
   const curD = {steps, cal, yt};
 
-  // 학생별로 정산 — 학생이 투자한 시점(pendingDate)을 기준으로 그 날짜와 dKey 비교
+  // 학생별로 정산 — 각 학생의 holdings를 lastSettled(또는 activeDate) → dKey로 평가 변동
   const snap=await getDocs(collection(db,'students'));
   const results=[];
   const histCache = {}; // 날짜별 history 캐시
@@ -1113,35 +1275,50 @@ async function resolveAll() {
 
   for(const d of snap.docs){
     const stu=d.data();
-    if(!stu.pending||!Object.keys(stu.pending).length) continue;
-    const stuFromDate = stu.pendingDate || activeDate;
-    if(!stuFromDate || stuFromDate >= dKey){
-      // 이 학생의 투자 시점이 결산 날짜와 같거나 이후 → 건드리지 않음
-      continue;
-    }
-    const prevForStu = await getHistData(stuFromDate);
-    if(!prevForStu) continue;
-    const risenStu = {};
-    IDX.forEach(idx=>{
-      const c=curD[idx.key], p=prevForStu[idx.key];
-      if(p==null){risenStu[idx.key]=null;return;}
-      risenStu[idx.key]=idx.invert?(c<p):(c>p);
-    });
+    const holdings = stu.holdings || {};
+    const holdingKeys = Object.keys(holdings);
+    if(!holdingKeys.length) continue;
+
     const logD=await getDoc(logRef(d.id));
     const entries=logD.exists()?(logD.data().entries||[]):[];
-    let totalPnl=0;
-    for(const key of Object.keys(stu.pending)){
-      const p=stu.pending[key],actualUp=risenStu[key];
-      if(actualUp===null) continue;
-      const rate=p.pred==='up'?(actualUp?5:-10):-10;
-      const pnl=Math.round(p.amt*rate/100);
-      totalPnl+=pnl;
-      entries.push({date:dateKeyToDisp(stuFromDate)+'→'+dateKeyToDisp(dKey),idx:IDX.find(i=>i.key===key).name,pred:p.pred,amt:p.amt,rate,pnl});
+    let totalDelta = 0;
+    const newHoldings = {...holdings};
+
+    for(const key of holdingKeys){
+      const h = holdings[key];
+      const fromDate = h.lastSettled;
+      if(!fromDate || fromDate >= dKey) continue; // 미래 시점이면 스킵
+      const prev = await getHistData(fromDate);
+      if(!prev) continue;
+      const idxMeta = IDX.find(i=>i.key===key);
+      const c = curD[key], p = prev[key];
+      if(p == null) continue;
+      const actualUp = idxMeta.invert ? (c < p) : (c > p);
+      // 예측 적중: +5%, 빗나감: -10%, 하락 예측은 결과와 무관 -10%
+      const rate = h.pred === 'up' ? (actualUp ? 5 : -10) : -10;
+      const oldVal = h.value || 0;
+      const newVal = Math.round(oldVal * (100 + rate) / 100);
+      const delta = newVal - oldVal;
+      totalDelta += delta;
+      newHoldings[key] = { ...h, value: newVal, lastSettled: dKey };
+      entries.push({
+        date: dateKeyToDisp(fromDate)+'→'+dateKeyToDisp(dKey),
+        idx: idxMeta.name,
+        type: 'settle',
+        pred: h.pred,
+        amt: oldVal,    // 결산 직전 보유분
+        rate,
+        pnl: delta,
+        noteVal: newVal // 결산 직후 보유분
+      });
     }
-    const newCash=Math.max(0,stu.cash+stu.invested+totalPnl);
-    await updateDoc(doc(db,'students',d.id),{cash:newCash,invested:0,pending:{},pendingDate:null});
-    await setDoc(logRef(d.id),{entries});
-    results.push(stu.name+' '+(totalPnl>=0?'+':'')+fmtC(totalPnl));
+
+    if(Object.keys(newHoldings).length === 0 && totalDelta === 0) continue;
+    await updateDoc(doc(db,'students',d.id), { holdings: newHoldings });
+    await setDoc(logRef(d.id), { entries });
+    if(totalDelta !== 0){
+      results.push(stu.name+' '+(totalDelta>=0?'+':'')+fmtC(totalDelta));
+    }
   }
 
   // today 메타 갱신 + activeDate 자동 이동 (결산 날짜로)
@@ -1157,8 +1334,8 @@ async function resolveAll() {
 
   btn.disabled=false; btn.textContent='결산하기 — 모든 학생 투자 반영';
   msg.textContent = results.length
-    ? '결산 완료 ('+dateKeyToDisp(activeDate)+'→'+dateKeyToDisp(dKey)+') — '+results.join(' / ')+'. 학생 활성 날짜를 '+dateKeyToDisp(dKey)+'(으)로 이동했어요.'
-    : '투자 중인 학생이 없어요. 학생 활성 날짜를 '+dateKeyToDisp(dKey)+'(으)로 이동했어요.';
+    ? '결산 완료 (→'+dateKeyToDisp(dKey)+') — '+results.join(' / ')+'. 학생 활성 날짜를 '+dateKeyToDisp(dKey)+'(으)로 이동했어요.'
+    : '보유 중인 학생이 없어요. 학생 활성 날짜를 '+dateKeyToDisp(dKey)+'(으)로 이동했어요.';
   renderIdxCards('tIdxCards', await buildIdxDataForDate(dKey));
   updateIdxTitle('tIdxTitleDate', dKey);
   const t3 = await getToday();
