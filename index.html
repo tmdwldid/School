@@ -191,6 +191,13 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
 .del-log-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:10px;font-family:'Noto Sans KR',sans-serif}
 .del-log-btn:hover{background:var(--red-bg);color:var(--red);border-color:var(--red)}
 
+/* 위험 영역 (학생 자산 초기화) */
+.danger-zone{margin-top:14px;padding:12px 14px;background:#FFF5F5;border:1px solid #FFCDD2;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.dz-title{font-size:12px;font-weight:700;color:var(--red)}
+.dz-desc{font-size:11px;color:#6B2424;flex:1;min-width:180px}
+.reset-stu-btn{background:#fff;border:1.5px solid var(--red);color:var(--red);padding:6px 14px;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap}
+.reset-stu-btn:hover{background:var(--red);color:#fff}
+
 @media(max-width:500px){
   .asset-grid{grid-template-columns:repeat(2,1fr)}
   .idx-grid{grid-template-columns:1fr}
@@ -672,6 +679,8 @@ document.getElementById('adminContent').addEventListener('click', (e)=>{
   if(delLog){ e.stopPropagation(); cancelLogEntry(delLog.dataset.sid, Number(delLog.dataset.idx)); return; }
   const cancelPending = e.target.closest('[data-act="cancel-pending"]');
   if(cancelPending){ e.stopPropagation(); cancelPendingItem(cancelPending.dataset.sid, cancelPending.dataset.key); return; }
+  const resetStu = e.target.closest('[data-act="reset-stu"]');
+  if(resetStu){ e.stopPropagation(); resetStudent(resetStu.dataset.sid); return; }
   const row = e.target.closest('[data-act="expand-stu"]');
   if(row){ toggleStudentDetail(row.dataset.sid); }
 });
@@ -938,7 +947,33 @@ async function renderStudentDetail(sid){
       '</div>';
   }
 
-  body.innerHTML = pendingHtml + logHtml;
+  const dangerHtml = '<div class="danger-zone">'+
+    '<div class="dz-title">⚠ 위험 영역</div>'+
+    '<div class="dz-desc">이 학생의 자산을 처음 상태(1,000캔, 투자 0, 기록 0)로 완전히 초기화해요.</div>'+
+    '<button class="reset-stu-btn" data-act="reset-stu" data-sid="'+sid+'">자산 초기화</button>'+
+  '</div>';
+
+  body.innerHTML = pendingHtml + logHtml + dangerHtml;
+}
+
+async function resetStudent(sid){
+  const stuDoc = await getDoc(stuRef(sid));
+  if(!stuDoc.exists()){ toast('학생을 찾을 수 없어요'); return; }
+  const stu = stuDoc.data();
+  if(!confirm(stu.name+' 학생의 자산을 완전히 초기화할까요?\n• 현금 1,000캔으로 리셋\n• 투자 중 모두 취소\n• 모든 결산 기록 삭제\n\n되돌릴 수 없어요.')) return;
+  try {
+    await updateDoc(stuRef(sid), {
+      cash: 1000,
+      invested: 0,
+      totalStart: 1000,
+      pending: {},
+      pendingDate: null
+    });
+    await setDoc(logRef(sid), { entries: [] });
+    toast(stu.name+' 학생 자산 초기화 완료');
+    await renderStudentDetail(sid);
+    loadAdminTable();
+  } catch(e){ toast('초기화 실패: '+e.message); }
 }
 
 async function cancelPendingItem(sid, key){
@@ -972,17 +1007,15 @@ async function cancelLogEntry(sid, idx){
   const target = entries[idx];
   if(!target){ toast('해당 기록이 없어요'); return; }
   const pnl = target.pnl || 0;
-  const amt = target.amt || 0;
-  // 되돌릴 금액 = 원래 투자금(원금) + 손익 - 즉 결산 시 받았던 (amt + pnl)을 빼고, 원래 캔에서 amt를 다시 빼야 함
-  // 결산 처리: 캔에 amt + pnl 들어옴 (원금 환급 + 손익)
-  // 취소: 캔에서 amt + pnl 빼기 → 마치 투자를 안 한 것처럼 됨
-  const adjust = amt + pnl;
-  const newCash = stu.cash - adjust;
-  if(newCash < 0){
-    if(!confirm('이 기록을 취소하면 학생 캔이 마이너스(' + newCash + '캔)가 돼요.\n그래도 진행할까요? (보통은 잔액 부족이라 권장하지 않아요)')) return;
-  } else {
-    if(!confirm(target.date+' · '+target.idx+' 투자 기록을 취소할까요?\n학생 캔에서 '+fmtC(adjust)+'을(를) 빼고 기록을 삭제해요.\n(취소 후 캔: '+fmtC(newCash)+')')) return;
-  }
+  // 결산 시 학생 캔에는 (원금 amt + 손익 pnl)이 들어왔음.
+  // 취소 = "이 투자가 없었던 것처럼" → 원래 캔으로 돌리려면 손익(pnl)만 빼면 됨.
+  // (원금은 결산 시 환급된 거라 학생이 가진 그대로 두는 게 맞음)
+  const newCash = stu.cash - pnl;
+  const sign = pnl >= 0 ? '+' : '';
+  const msgLine = pnl === 0
+    ? '이 기록을 취소할까요? (손익이 0이라 캔은 그대로예요)'
+    : '이 기록을 취소하면 학생 캔에서 손익('+sign+fmtC(pnl)+')을 되돌려요.\n취소 후 캔: '+fmtC(stu.cash)+' → '+fmtC(newCash);
+  if(!confirm(target.date+' · '+target.idx+'\n'+msgLine)) return;
   try {
     const newEntries = entries.filter((_,i)=>i!==idx);
     await updateDoc(stuRef(sid), { cash: newCash });
