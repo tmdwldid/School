@@ -281,7 +281,7 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
   <div class="card rate-info-card">
     <div class="rate-row">
       <div class="rate-item rate-up"><span class="rate-icon">▲</span> 예측 적중 시 <strong>+5%</strong></div>
-      <div class="rate-item rate-down"><span class="rate-icon">▼</span> 예측 빗나가면 <strong>-10%</strong></div>
+      <div class="rate-item rate-down"><span class="rate-icon">▼</span> 예측 빗나가면 <strong>-5%</strong></div>
     </div>
     <div class="rate-note">※ 수익률은 추후 변동될 수 있어요.</div>
   </div>
@@ -345,7 +345,7 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
   <div class="card rate-info-card">
     <div class="rate-row">
       <div class="rate-item rate-up"><span class="rate-icon">▲</span> 예측 적중 시 <strong>+5%</strong></div>
-      <div class="rate-item rate-down"><span class="rate-icon">▼</span> 예측 빗나가면 <strong>-10%</strong></div>
+      <div class="rate-item rate-down"><span class="rate-icon">▼</span> 예측 빗나가면 <strong>-5%</strong></div>
     </div>
     <div class="rate-note">※ 수익률은 추후 변동될 수 있어요.</div>
   </div>
@@ -1294,8 +1294,8 @@ async function resolveAll() {
       const c = curD[key], p = prev[key];
       if(p == null) continue;
       const actualUp = idxMeta.invert ? (c < p) : (c > p);
-      // 예측 적중: +5%, 빗나감: -10%, 하락 예측은 결과와 무관 -10%
-      const rate = h.pred === 'up' ? (actualUp ? 5 : -10) : -10;
+      // 예측 적중: +5%, 빗나감: -5%, 하락 예측은 결과와 무관 -5%
+      const rate = h.pred === 'up' ? (actualUp ? 5 : -5) : -5;
       const oldVal = h.value || 0;
       const newVal = Math.round(oldVal * (100 + rate) / 100);
       const delta = newVal - oldVal;
