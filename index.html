@@ -80,6 +80,8 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
 .amt-chip{padding:4px 10px;border:1.5px solid var(--border);border-radius:20px;cursor:pointer;font-size:12px;background:#fff;color:var(--text-muted);font-family:'Noto Sans KR',sans-serif;transition:all .15s}
 .amt-chip:hover{border-color:var(--orange);color:var(--orange)}
 .amt-chip.sel{background:var(--orange-light);color:var(--orange);border-color:var(--orange);font-weight:700}
+.amt-chip.amt-chip-disabled{opacity:.35;text-decoration:line-through;cursor:not-allowed}
+.amt-chip.amt-chip-disabled:hover{border-color:var(--border);color:var(--text-muted)}
 .warn-note{font-size:11px;color:var(--red);margin-top:6px;background:var(--red-bg);padding:5px 8px;border-radius:4px}
 .confirm-btn{width:100%;padding:13px;background:var(--navy);color:#fff;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-bottom:12px;transition:opacity .2s}
 .confirm-btn:hover{opacity:.85}
@@ -629,12 +631,23 @@ function renderIdxCards(cid,today){
 }
 
 function renderInvestRows(stu){
-  const maxStep=Math.floor(stu.cash/100);
+  // 다른 항목에 이미 책정한 합계
+  const otherCommitted = (key) => {
+    let s = 0;
+    Object.keys(plan).forEach(k=>{ if(k!==key && plan[k].amt>0) s += plan[k].amt; });
+    return s;
+  };
   document.getElementById('investRows').innerHTML=IDX.map(idx=>{
     const p=plan[idx.key];
-    const chips=[1,2,3,5,10].filter(x=>x<=maxStep).map(x=>
-      '<span class="amt-chip '+(p.amt===x*100?'sel':'')+'" data-act="amt" data-key="'+idx.key+'" data-amt="'+(x*100)+'">'+x*100+'</span>'
-    ).join('')+'<span class="amt-chip '+(p.amt===0?'sel':'')+'" data-act="amt" data-key="'+idx.key+'" data-amt="0">안 함</span>';
+    const otherSum = otherCommitted(idx.key);
+    const available = Math.max(0, stu.cash - otherSum);
+    // 항상 5개 칩 표시. 캔 부족하면 비활성화 클래스
+    const chips=[1,2,3,4,5,6,7,8,9,10].map(x=>{
+      const amt = x*100;
+      const tooBig = amt > available;
+      const cls = (p.amt===amt?'sel ':'') + (tooBig?'amt-chip-disabled':'');
+      return '<span class="amt-chip '+cls+'" data-act="amt" data-key="'+idx.key+'" data-amt="'+amt+'">'+amt+'</span>';
+    }).join('')+'<span class="amt-chip '+(p.amt===0?'sel':'')+'" data-act="amt" data-key="'+idx.key+'" data-amt="0">안 함</span>';
     const warn=p.pred==='down'&&p.amt>0?'<div class="warn-note">⚠ 하락 예측으로 투자하면 결과와 무관하게 손실이 발생해요.</div>':'';
     const upLabel  = idx.invert ? '▲ 상승 예측 (시청 적을 것)' : '▲ 상승 예측';
     const downLabel= idx.invert ? '▼ 하락 예측 (시청 많을 것)' : '▼ 하락 예측';
@@ -655,8 +668,17 @@ async function handlePred(key,pred){
   const stu=await getStu(currentSid); renderInvestRows(stu);
 }
 async function handleAmt(key,amt){
+  const stu = await getStu(currentSid);
+  if(amt > 0){
+    let otherSum = 0;
+    Object.keys(plan).forEach(k=>{ if(k!==key && plan[k].amt>0) otherSum += plan[k].amt; });
+    if(amt + otherSum > stu.cash){
+      toast('현금이 부족해요 (현재 '+fmtC(stu.cash)+')');
+      return;
+    }
+  }
   plan[key].amt=amt;
-  const stu=await getStu(currentSid); renderInvestRows(stu);
+  renderInvestRows(stu);
 }
 
 document.getElementById('investRows').addEventListener('click', (e)=>{
@@ -1008,14 +1030,19 @@ async function cancelLogEntry(sid, idx){
   if(!target){ toast('해당 기록이 없어요'); return; }
   const pnl = target.pnl || 0;
   // 결산 시 학생 캔에는 (원금 amt + 손익 pnl)이 들어왔음.
-  // 취소 = "이 투자가 없었던 것처럼" → 원래 캔으로 돌리려면 손익(pnl)만 빼면 됨.
-  // (원금은 결산 시 환급된 거라 학생이 가진 그대로 두는 게 맞음)
+  // 취소 = "이 투자가 없었던 것처럼" → 캔에서 pnl만 빼면 됨.
+  //   pnl이 +5면 newCash = cash - 5 (이득 반납)
+  //   pnl이 -10이면 newCash = cash - (-10) = cash + 10 (손실 복구)
   const newCash = stu.cash - pnl;
-  const sign = pnl >= 0 ? '+' : '';
-  const msgLine = pnl === 0
-    ? '이 기록을 취소할까요? (손익이 0이라 캔은 그대로예요)'
-    : '이 기록을 취소하면 학생 캔에서 손익('+sign+fmtC(pnl)+')을 되돌려요.\n취소 후 캔: '+fmtC(stu.cash)+' → '+fmtC(newCash);
-  if(!confirm(target.date+' · '+target.idx+'\n'+msgLine)) return;
+  let msgLine;
+  if(pnl === 0){
+    msgLine = '이 기록을 취소할까요? (손익이 0이라 캔은 그대로예요)';
+  } else if(pnl > 0){
+    msgLine = '이 기록은 +'+fmtC(pnl)+' 이득이었어요.\n취소하면 그 이득을 회수해서 캔이 줄어요.\n\n현재: '+fmtC(stu.cash)+' → 취소 후: '+fmtC(newCash);
+  } else {
+    msgLine = '이 기록은 '+fmtC(pnl)+' 손실이었어요.\n취소하면 그 손실을 복구해서 캔이 늘어요.\n\n현재: '+fmtC(stu.cash)+' → 취소 후: '+fmtC(newCash);
+  }
+  if(!confirm(target.date+' · '+target.idx+'\n\n'+msgLine)) return;
   try {
     const newEntries = entries.filter((_,i)=>i!==idx);
     await updateDoc(stuRef(sid), { cash: newCash });
