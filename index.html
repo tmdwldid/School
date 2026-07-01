@@ -204,6 +204,31 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
 .del-log-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:10px;font-family:'Noto Sans KR',sans-serif}
 .del-log-btn:hover{background:var(--red-bg);color:var(--red);border-color:var(--red)}
 
+/* 실현손익 카드 */
+.realized-card{background:#FAFCFE;border:1px solid var(--blue-light)}
+.realized-summary{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.rs-total{font-size:22px;font-weight:700}
+.rs-total.up{color:var(--green)}
+.rs-total.down{color:var(--red)}
+.rs-total.zero{color:var(--text-muted)}
+.rs-breakdown{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text-muted)}
+.rs-breakdown b{color:var(--text);font-weight:700}
+
+/* 자산 흐름 표 */
+.flow-table{width:100%;border-collapse:collapse;font-size:12px}
+.flow-table thead{background:var(--gray-bg)}
+.flow-table th{text-align:right;padding:8px 10px;font-size:11px;color:var(--text-muted);font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap}
+.flow-table th:first-child{text-align:left}
+.flow-table td{padding:7px 10px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+.flow-table td:first-child{text-align:left;font-weight:500}
+.flow-table tr:last-child td{border-bottom:none}
+.flow-table tr.flow-event-row td{background:#FFFBF0;font-size:11px;color:var(--text-muted);font-style:italic}
+.flow-table tr.flow-event-row td:first-child{padding-left:24px}
+.flow-table tr.legacy-note-row td{background:#FFF5F5;color:#8B5A00;font-size:11px;padding:8px 10px;text-align:center}
+.flow-delta-up{color:var(--green);font-size:10px;margin-left:3px}
+.flow-delta-down{color:var(--red);font-size:10px;margin-left:3px}
+.flow-empty{color:var(--text-muted);opacity:.4}
+
 /* 위험 영역 (학생 자산 초기화) */
 .danger-zone{margin-top:14px;padding:12px 14px;background:#FFF5F5;border:1px solid #FFCDD2;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .dz-title{font-size:12px;font-weight:700;color:var(--red)}
@@ -291,6 +316,21 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
       <table class="hist-table">
         <thead><tr><th>주차</th><th>날짜</th><th>🦶 걸음수</th><th>🔥 칼로리</th><th>📺 유튜브</th></tr></thead>
         <tbody id="sHistoryBody"><tr><td colspan="5" class="empty-cell">불러오는 중...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card realized-card">
+    <div class="card-title">💰 실현손익 (매도해서 확정된 손익)</div>
+    <div id="realizedSummary" class="realized-summary"><div class="empty-note">매도 기록이 없어요.</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📊 자산 흐름 (날짜별)</div>
+    <div class="table-wrap">
+      <table class="flow-table">
+        <thead><tr>
+          <th>날짜</th><th>현금</th><th>🦶 걸음수</th><th>🔥 칼로리</th><th>📺 유튜브</th><th>총자산</th>
+        </tr></thead>
+        <tbody id="sFlowBody"><tr><td colspan="6" class="empty-cell">불러오는 중...</td></tr></tbody>
       </table>
     </div>
   </div>
@@ -564,8 +604,194 @@ async function loadStudent(){
   updateIdxTitle('sIdxTitleDate', activeDate);
   renderHoldings(stu);
   renderInvestRows(stu);
+  renderRealizedSummary(currentSid);
+  renderAssetFlow(currentSid, 'sFlowBody');
   renderLog();
   renderHistory('sHistoryBody', false);
+}
+
+async function renderRealizedSummary(sid){
+  const el = document.getElementById('realizedSummary');
+  if(!el) return;
+  const logD = await getDoc(logRef(sid));
+  const entries = logD.exists() ? (logD.data().entries || []) : [];
+  const sells = entries.filter(e => e.type === 'sell');
+  if(!sells.length){
+    el.innerHTML = '<div class="empty-note">매도 기록이 없어요.</div>';
+    return;
+  }
+  // 지수별 실현손익 집계
+  const byIdx = {};
+  sells.forEach(s => {
+    const r = (s.realizedPnl != null) ? s.realizedPnl : (s.pnl || 0);
+    byIdx[s.idx] = (byIdx[s.idx] || 0) + r;
+  });
+  const totalRealized = Object.values(byIdx).reduce((a,b)=>a+b,0);
+  const totalCls = totalRealized > 0 ? 'up' : (totalRealized < 0 ? 'down' : 'zero');
+  const breakdown = Object.keys(byIdx).map(k => {
+    const v = byIdx[k];
+    const cls = v>=0?'log-plus':'log-minus';
+    return '<span><b>'+k+'</b>: <span class="'+cls+'">'+(v>=0?'+':'')+fmtC(v)+'</span></span>';
+  }).join('');
+  el.innerHTML =
+    '<div><div style="font-size:11px;color:var(--text-muted)">총 실현손익</div>'+
+    '<div class="rs-total '+totalCls+'">'+(totalRealized>=0?'+':'')+fmtC(totalRealized)+'</div></div>'+
+    '<div class="rs-breakdown">'+breakdown+'</div>';
+}
+
+// 시간순 로그 + history 데이터로 일자별 자산 스냅샷 재생
+async function renderAssetFlow(sid, tbodyId){
+  const tbody = document.getElementById(tbodyId);
+  if(!tbody) return;
+  const [stuDoc, logDoc] = await Promise.all([getDoc(stuRef(sid)), getDoc(logRef(sid))]);
+  if(!stuDoc.exists()){ tbody.innerHTML='<tr><td colspan="6" class="empty-cell">데이터 없음</td></tr>'; return; }
+  const entries = logDoc.exists() ? (logDoc.data().entries || []) : [];
+  if(!entries.length){
+    tbody.innerHTML='<tr><td colspan="6" class="empty-cell">아직 거래가 없어요.</td></tr>';
+    return;
+  }
+
+  const idxKeys = IDX.map(i=>i.key);
+  const nameToKey = {};
+  IDX.forEach(i => nameToKey[i.name] = i.key);
+
+  // 표시용 한글 날짜 → 정렬 가능한 키로 파싱
+  // 형식 예: "6/22(월)", "6/22(월)→6/23(화)", "6/26(금)"
+  // 결산은 "→"의 오른쪽(결산 시점)을 정렬 기준으로
+  // 옛 데이터에는 dateKey가 없을 수 있으므로 표시 라벨에서 추출
+  const currentYear = new Date().getFullYear();
+  function parseDispDateKey(dispStr){
+    if(!dispStr) return '9999-99-99';
+    // "A→B" 면 B 사용
+    const target = dispStr.includes('→') ? dispStr.split('→').pop() : dispStr;
+    const m = target.match(/(\d+)\/(\d+)/);
+    if(!m) return '9999-99-99';
+    return currentYear + '-' + m[1].padStart(2,'0') + '-' + m[2].padStart(2,'0');
+  }
+
+  // entries에 정렬 키 부여하고 안정 정렬 (같은 날짜면 원래 입력 순서 유지: buy → settle → sell이 자연스러움)
+  const typeOrder = { buy: 0, settle: 1, sell: 2 };
+  const enriched = entries.map((e, origIdx) => ({
+    ...e,
+    _sortKey: parseDispDateKey(e.date),
+    _typeOrder: typeOrder[e.type] != null ? typeOrder[e.type] : (e.pnl != null ? 1 : 9),
+    _origIdx: origIdx
+  }));
+  enriched.sort((a,b) => {
+    if(a._sortKey !== b._sortKey) return a._sortKey.localeCompare(b._sortKey);
+    if(a._typeOrder !== b._typeOrder) return a._typeOrder - b._typeOrder;
+    return a._origIdx - b._origIdx;
+  });
+
+  // 시간순으로 재생
+  let cash = 1000;
+  const hold = {};
+  let hasLegacyData = false; // 매수 기록 없는데 결산/매도가 나오는 경우
+
+  const dispRows = [];
+  const pushSnapshot = (dateLabel, eventText) => {
+    const last = dispRows[dispRows.length-1];
+    if(last && last.dateLabel === dateLabel){
+      last.cash = cash;
+      last.hold = {...hold};
+      if(eventText) last.events.push(eventText);
+    } else {
+      dispRows.push({ dateLabel, cash, hold: {...hold}, events: eventText ? [eventText] : [] });
+    }
+  };
+
+  enriched.forEach(e => {
+    const k = nameToKey[e.idx];
+    if(e.type === 'buy'){
+      if(!k) return;
+      cash -= e.amt;
+      hold[k] = (hold[k] || 0) + e.amt;
+      pushSnapshot(e.date, '매수 '+e.idx+' '+fmtC(e.amt));
+    } else if(e.type === 'sell'){
+      if(!k) return;
+      const currentHold = hold[k] || 0;
+      // 매도 시 보유분이 매도액보다 작거나, 아예 없으면 (옛 데이터)
+      if(currentHold !== e.amt){
+        hasLegacyData = true;
+        const diff = e.amt - currentHold;
+        if(diff > 0){
+          // 부족한 만큼 추정 매수
+          cash -= diff;
+          hold[k] = e.amt;
+          pushSnapshot(e.date, '(추정) 매수 '+e.idx+' '+fmtC(diff)+' — 옛 매수 기록 누락');
+        }
+      }
+      cash += e.amt;
+      delete hold[k];
+      const rp = e.realizedPnl != null ? e.realizedPnl : (e.pnl || 0);
+      pushSnapshot(e.date, '매도 '+e.idx+' '+fmtC(e.amt)+' (실현 '+(rp>=0?'+':'')+fmtC(rp)+')');
+    } else {
+      // settle
+      if(!k) return;
+      const beforeFromLog = (e.amt != null) ? e.amt : null;       // 로그에 기록된 결산 직전 평가
+      const currentHold = hold[k] || 0;                            // 시뮬레이션 상의 현재 보유
+      // 시뮬과 로그가 안 맞으면 (옛 데이터의 흔적) — 차이만큼 추정 매수/매도로 보정
+      if(beforeFromLog != null && beforeFromLog !== currentHold){
+        const diff = beforeFromLog - currentHold;
+        hasLegacyData = true;
+        if(diff > 0){
+          // 매수 추정: cash 차감 + hold 증가
+          cash -= diff;
+          hold[k] = beforeFromLog;
+          pushSnapshot(e.date, '(추정) 매수 '+e.idx+' '+fmtC(diff)+' — 옛 매수 기록 누락');
+        } else {
+          // 매도 추정: cash 증가 + hold 감소
+          cash += (-diff);
+          hold[k] = beforeFromLog;
+          pushSnapshot(e.date, '(추정) 매도 '+e.idx+' '+fmtC(-diff)+' — 옛 매도 기록 누락');
+        }
+      }
+      const before = hold[k];
+      const after = (e.noteVal != null) ? e.noteVal : ((before || 0) + (e.pnl || 0));
+      hold[k] = after;
+      const rate = e.rate || 0;
+      pushSnapshot(e.date, '결산 '+e.idx+' '+(rate>=0?'+':'')+rate+'% ('+fmtC(before)+'→'+fmtC(after)+')');
+    }
+  });
+
+  if(!dispRows.length){
+    tbody.innerHTML='<tr><td colspan="6" class="empty-cell">기록이 없어요.</td></tr>';
+    return;
+  }
+
+  let prevTotal = 1000;
+  let prev = { cash: 1000, hold: {} };
+  let html = '';
+  if(hasLegacyData){
+    html += '<tr class="legacy-note-row"><td colspan="6">⚠ 옛 시스템 시절 매수 기록이 누락되어 있어, 부족한 부분을 (추정 매수)로 표시했어요. 표 안의 현금/평가 변화는 실제 거래와 일치하도록 보정됐어요.</td></tr>';
+  }
+  dispRows.forEach(row => {
+    const total = row.cash + idxKeys.reduce((s,k)=>s+(row.hold[k]||0), 0);
+    const totalDelta = total - prevTotal;
+    const cell = (cur, prevV) => {
+      const d = cur - prevV;
+      const main = cur > 0 ? fmtC(cur) : '<span class="flow-empty">—</span>';
+      if(d === 0) return main;
+      const cls = d>0?'flow-delta-up':'flow-delta-down';
+      return main+' <span class="'+cls+'">('+(d>0?'+':'')+d+')</span>';
+    };
+    html += '<tr>'+
+      '<td>'+row.dateLabel+'</td>'+
+      '<td>'+cell(row.cash, prev.cash)+'</td>'+
+      '<td>'+cell(row.hold.steps||0, prev.hold.steps||0)+'</td>'+
+      '<td>'+cell(row.hold.cal||0, prev.hold.cal||0)+'</td>'+
+      '<td>'+cell(row.hold.yt||0, prev.hold.yt||0)+'</td>'+
+      '<td><strong>'+fmtC(total)+'</strong>'+
+        (totalDelta!==0?' <span class="'+(totalDelta>0?'flow-delta-up':'flow-delta-down')+'">('+(totalDelta>0?'+':'')+totalDelta+')</span>':'')+
+      '</td>'+
+    '</tr>';
+    row.events.forEach(ev => {
+      html += '<tr class="flow-event-row"><td>↳ '+ev+'</td><td colspan="5"></td></tr>';
+    });
+    prev = { cash: row.cash, hold: {...row.hold} };
+    prevTotal = total;
+  });
+  tbody.innerHTML = html;
 }
 
 function renderHoldings(stu){
@@ -768,6 +994,7 @@ async function confirmInvest() {
 
   let total=0;
   const newHoldings = {...(stu.holdings||{})};
+  const buyEntries = [];
   IDX.forEach(i=>{
     const p = plan[i.key];
     if(p.pred && p.amt > 0){
@@ -778,25 +1005,42 @@ async function confirmInvest() {
         newHoldings[i.key] = {
           value: (prev.value || 0) + p.amt,
           pred:  p.pred,
-          lastSettled: investedAt
+          lastSettled: investedAt,
+          principal: (prev.principal || prev.value || 0) + p.amt  // 매수 누적 원금
         };
       } else {
         newHoldings[i.key] = {
           value: p.amt,
           pred:  p.pred,
-          lastSettled: investedAt
+          lastSettled: investedAt,
+          principal: p.amt
         };
       }
+      buyEntries.push({
+        date: dateKeyToDisp(investedAt || todayKey()),
+        idx: i.name,
+        type: 'buy',
+        pred: p.pred,
+        amt: p.amt,
+        pnl: 0,
+        rate: 0
+      });
     }
   });
 
   if(total===0){toast('투자할 지수와 금액을 선택해주세요.');return;}
   if(total>stu.cash){toast('현금이 부족해요!');return;}
 
+  // 매수 로그 추가
+  const logD = await getDoc(logRef(currentSid));
+  const entries = logD.exists() ? (logD.data().entries || []) : [];
+  buyEntries.forEach(e => entries.push(e));
+
   await updateDoc(stuRef(currentSid),{
     cash: stu.cash - total,
     holdings: newHoldings
   });
+  await setDoc(logRef(currentSid), { entries });
   resetPlan();
   toast('매수 완료! 결산 후 보유 가치가 변동돼요.');
   loadStudent();
@@ -807,7 +1051,9 @@ async function sellHolding(key){
   const h = (stu.holdings || {})[key];
   if(!h || !h.value){ toast('이 지수에 보유분이 없어요'); return; }
   const idxName = IDX.find(i=>i.key===key)?.name || key;
-  if(!confirm(idxName+' 보유분 '+fmtC(h.value)+'을(를) 매도해서 현금으로 바꿀까요?')) return;
+  const principal = h.principal != null ? h.principal : h.value; // 옛 데이터는 principal 없을 수 있음
+  const realizedPnl = h.value - principal;
+  if(!confirm(idxName+' 보유분 '+fmtC(h.value)+'을(를) 매도해서 현금으로 바꿀까요?\n\n매수 원금: '+fmtC(principal)+'\n실현손익: '+(realizedPnl>=0?'+':'')+fmtC(realizedPnl))) return;
   const newHoldings = {...stu.holdings};
   delete newHoldings[key];
   // logs에 매도 기록 추가
@@ -817,9 +1063,11 @@ async function sellHolding(key){
     date: dateKeyToDisp(todayKey()),
     idx: idxName,
     type: 'sell',
-    amt: h.value,
-    pnl: 0,
-    rate: 0,
+    amt: h.value,              // 매도 금액
+    principal: principal,      // 매수 원금
+    realizedPnl: realizedPnl,  // 실현 손익
+    pnl: realizedPnl,          // 호환용
+    rate: principal > 0 ? Math.round(realizedPnl/principal*100*10)/10 : 0,
     note: '매도 → 현금화'
   });
   await updateDoc(stuRef(currentSid), {
@@ -827,7 +1075,7 @@ async function sellHolding(key){
     holdings: newHoldings
   });
   await setDoc(logRef(currentSid), { entries });
-  toast(fmtC(h.value)+' 매도 완료');
+  toast(fmtC(h.value)+' 매도 완료 (실현손익 '+(realizedPnl>=0?'+':'')+fmtC(realizedPnl)+')');
   loadStudent();
 }
 
@@ -1108,13 +1356,21 @@ async function renderStudentDetail(sid){
       '</div>';
   }
 
+  const flowHtml = '<div class="detail-section-title" style="margin-top:14px">📊 자산 흐름 (날짜별)</div>'+
+    '<div class="table-wrap"><table class="flow-table">'+
+      '<thead><tr><th>날짜</th><th>현금</th><th>🦶 걸음수</th><th>🔥 칼로리</th><th>📺 유튜브</th><th>총자산</th></tr></thead>'+
+      '<tbody id="tFlow_'+sid+'"><tr><td colspan="6" class="empty-cell">불러오는 중...</td></tr></tbody>'+
+    '</table></div>';
+
   const dangerHtml = '<div class="danger-zone">'+
     '<div class="dz-title">⚠ 위험 영역</div>'+
     '<div class="dz-desc">이 학생의 자산을 처음 상태(1,000캔, 보유 0, 기록 0)로 완전히 초기화해요.</div>'+
     '<button class="reset-stu-btn" data-act="reset-stu" data-sid="'+sid+'">자산 초기화</button>'+
   '</div>';
 
-  body.innerHTML = holdingsHtml + logHtml + dangerHtml;
+  body.innerHTML = holdingsHtml + logHtml + flowHtml + dangerHtml;
+  // 흐름 표는 같은 함수 재사용
+  renderAssetFlow(sid, 'tFlow_'+sid);
 }
 
 async function resetStudent(sid){
