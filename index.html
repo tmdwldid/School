@@ -236,6 +236,15 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
 .reset-stu-btn{background:#fff;border:1.5px solid var(--red);color:var(--red);padding:6px 14px;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap}
 .reset-stu-btn:hover{background:var(--red);color:#fff}
 
+/* 전체 정리 카드 */
+.cleanup-card{background:#FFF5F5;border:1px solid #FFCDD2}
+.cleanup-desc{font-size:13px;color:#6B2424;line-height:1.6;margin-bottom:12px}
+.cleanup-list{margin-top:8px;padding-left:22px;font-size:12px;line-height:1.7}
+.cleanup-btn{width:100%;padding:11px;background:var(--red);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif}
+.cleanup-btn:hover{opacity:.85}
+.cleanup-btn:disabled{opacity:.4;cursor:not-allowed}
+.cleanup-msg{margin-top:10px;font-size:12px;background:#fff;padding:10px 12px;border-radius:var(--radius-sm);display:none;max-height:200px;overflow-y:auto;border:1px solid var(--border);line-height:1.7}
+
 @media(max-width:500px){
   .asset-grid{grid-template-columns:repeat(2,1fr)}
   .idx-grid{grid-template-columns:1fr}
@@ -397,6 +406,20 @@ html,body{height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--gra
         <tbody id="tHistoryBody"><tr><td colspan="6" class="empty-cell">불러오는 중...</td></tr></tbody>
       </table>
     </div>
+  </div>
+  <div class="card cleanup-card">
+    <div class="card-title">🔧 전체 학생 자산 정리 (옛 데이터 정리용)</div>
+    <div class="cleanup-desc">
+      옛 코드 버그로 자산이 부풀려진 학생들이 있어요. 이 버튼은 <strong>모든 학생의 자산을 결산 손익 합계만 반영한 정확한 값으로 재계산</strong>해요.
+      <ul class="cleanup-list">
+        <li>새 자산 = 1,000캔 + (그 학생의 모든 결산 손익 합)</li>
+        <li>보유분은 모두 매도된 것으로 처리 (0캔)</li>
+        <li>기록(로그)은 그대로 유지</li>
+        <li>이후 새 매수/결산은 정상 작동</li>
+      </ul>
+    </div>
+    <button class="cleanup-btn" id="cleanupAllBtn">모든 학생 자산 정리하기</button>
+    <div class="cleanup-msg" id="cleanupMsg"></div>
   </div>
   <div class="card">
     <div class="card-title">학생 투자 현황</div>
@@ -1394,6 +1417,47 @@ async function resetStudent(sid){
   } catch(e){ toast('초기화 실패: '+e.message); }
 }
 
+async function cleanupAllStudents(){
+  if(!confirm('모든 학생의 자산을 [1,000캔 + 결산 손익 합]으로 재계산할까요?\n\n• 보유분은 매도된 것으로 처리 (0캔)\n• 로그 기록은 유지\n• 이후 새 매수/결산은 정상 작동\n\n되돌릴 수 없어요.')) return;
+  const btn = document.getElementById('cleanupAllBtn');
+  const msg = document.getElementById('cleanupMsg');
+  btn.disabled = true; btn.textContent = '정리 중...';
+  const results = [];
+  try {
+    const snap = await getDocs(collection(db,'students'));
+    for(const d of snap.docs){
+      const stu = d.data();
+      const logD = await getDoc(logRef(d.id));
+      const entries = logD.exists() ? (logD.data().entries || []) : [];
+      // 결산 손익만 합산 (settle 타입 또는 옛 형식)
+      let settlePnl = 0;
+      entries.forEach(e => {
+        if(e.type === 'settle' || (!e.type && e.pnl != null && e.note == null)){
+          settlePnl += (e.pnl || 0);
+        }
+      });
+      const newCash = 1000 + settlePnl;
+      await updateDoc(doc(db,'students',d.id), {
+        cash: newCash,
+        holdings: {},
+        invested: 0,
+        pending: {},
+        pendingDate: null,
+        totalStart: 1000
+      });
+      const sign = settlePnl >= 0 ? '+' : '';
+      results.push(stu.name + ': ' + fmtC(newCash) + ' (' + sign + fmtC(settlePnl) + ')');
+    }
+    msg.style.display = 'block';
+    msg.innerHTML = '✅ 정리 완료 (' + results.length + '명)<br><br>' + results.join('<br>');
+    loadAdminTable();
+  } catch(e){
+    msg.style.display = 'block';
+    msg.innerHTML = '❌ 실패: ' + e.message;
+  }
+  btn.disabled = false; btn.textContent = '모든 학생 자산 정리하기';
+}
+
 async function cancelHoldingItem(sid, key){
   const stuDoc = await getDoc(stuRef(sid));
   if(!stuDoc.exists()){ toast('학생을 찾을 수 없어요'); return; }
@@ -1609,6 +1673,7 @@ document.getElementById('stuLogoutBtn').addEventListener('click', logout);
 document.getElementById('tchLogoutBtn').addEventListener('click', logout);
 document.getElementById('confirmInvestBtn').addEventListener('click', confirmInvest);
 document.getElementById('resolveBtn').addEventListener('click', resolveAll);
+document.getElementById('cleanupAllBtn').addEventListener('click', cleanupAllStudents);
 
 /* 날짜 선택 동작 */
 document.getElementById('ti_date').addEventListener('change', async ()=>{
